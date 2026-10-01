@@ -37,6 +37,8 @@ create table if not exists public.orcamentos (
   custos jsonb not null default '[]'::jsonb,
   pagamento_forma text not null default 'a_vista' check (pagamento_forma in ('a_vista', 'parcelado')),
   pagamento_parcelas integer not null default 1 check (pagamento_parcelas between 1 and 24),
+  fotos jsonb not null default '[]'::jsonb,
+  pdf_fotos boolean not null default false,
   condicoes text not null default '',
   observacoes text not null default '',
   criado_em timestamptz not null default now(),
@@ -49,6 +51,8 @@ alter table public.orcamentos add column if not exists pagamento_forma text not 
   check (pagamento_forma in ('a_vista', 'parcelado'));
 alter table public.orcamentos add column if not exists pagamento_parcelas integer not null default 1
   check (pagamento_parcelas between 1 and 24);
+alter table public.orcamentos add column if not exists fotos jsonb not null default '[]'::jsonb;
+alter table public.orcamentos add column if not exists pdf_fotos boolean not null default false;
 
 create index if not exists orcamentos_user_data_idx on public.orcamentos (user_id, data_servico);
 
@@ -134,7 +138,7 @@ begin
     id, user_id, numero, status, cliente_nome, cliente_telefone, cliente_email,
     local_tipo, endereco, complemento, data_servico, hora_servico, data_emissao,
     validade_dias, itens, desconto_tipo, desconto, custos, pagamento_forma, pagamento_parcelas,
-    condicoes, observacoes, criado_em, atualizado_em
+    fotos, pdf_fotos, condicoes, observacoes, criado_em, atualizado_em
   )
   select
     coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.status, 'rascunho'),
@@ -144,6 +148,7 @@ begin
     coalesce(o.validade_dias, 30), coalesce(o.itens, '[]'::jsonb),
     coalesce(o.desconto_tipo, 'valor'), coalesce(o.desconto, 0), coalesce(o.custos, '[]'::jsonb),
     coalesce(o.pagamento_forma, 'a_vista'), coalesce(o.pagamento_parcelas, 1),
+    coalesce(o.fotos, '[]'::jsonb), coalesce(o.pdf_fotos, false),
     coalesce(o.condicoes, ''), coalesce(o.observacoes, ''),
     coalesce(o.criado_em, now()), coalesce(o.atualizado_em, now())
   from jsonb_populate_recordset(null::orcamentos, coalesce(backup -> 'orcamentos', '[]'::jsonb)) as o;

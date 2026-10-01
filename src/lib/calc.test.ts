@@ -36,6 +36,8 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     custos: [],
     pagamento_forma: 'a_vista',
     pagamento_parcelas: 1,
+    fotos: [],
+    pdf_fotos: false,
     condicoes: '',
     observacoes: '',
     criado_em: '',

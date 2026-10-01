@@ -4,6 +4,7 @@ import type { Configuracoes, Orcamento } from '../types'
 import { LOCAL_ROTULO } from './constantes'
 import { numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto, valorParcela } from './calc'
 import { dataBR, dataHoraBR, decimal, reais } from './formato'
+import { imagemParaPdf } from './imagem'
 
 // Este módulo só usa os dados do cliente, itens, desconto e condições.
 // Os custos internos (orcamento.custos) NUNCA entram no PDF.
@@ -29,7 +30,7 @@ export function textoPagamento(o: Pick<Orcamento, 'pagamento_forma' | 'pagamento
   return `À vista, no ato do serviço: ${reais(valorTotal)}`
 }
 
-export function gerarPdf(o: Orcamento, config: Configuracoes): Blob {
+export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (ref: string) => string): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   let y = MARGEM
 
@@ -222,6 +223,51 @@ export function gerarPdf(o: Orcamento, config: Configuracoes): Blob {
   doc.setTextColor(...COR_SUAVE)
   doc.text(`Assinatura do cliente${o.cliente_nome ? ` - ${o.cliente_nome}` : ''}`, MARGEM, y + 4)
   doc.text('Data', MARGEM + 120, y + 4)
+
+  // ---- Registro fotográfico (opcional) ----
+  if (o.pdf_fotos && o.fotos.length) {
+    doc.addPage()
+    y = MARGEM
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(...COR_TEXTO)
+    doc.text('Registro fotográfico', MARGEM, y + 4)
+    y += 12
+    const coluna = (UTIL - 6) / 2
+    const alturaMax = 75
+    for (const [momento, rotulo] of [['antes', 'Antes do serviço'], ['depois', 'Depois do serviço']] as const) {
+      const lista = o.fotos.filter((f) => f.momento === momento)
+      if (!lista.length) continue
+      titulo(rotulo)
+      for (let i = 0; i < lista.length; i += 2) {
+        const par = await Promise.all(
+          lista.slice(i, i + 2).map((f) => imagemParaPdf(urlFoto(f.ref)).catch(() => null)),
+        )
+        const alturas = par.map((img) => (img ? Math.min(alturaMax, (img.altura / img.largura) * coluna) : 20))
+        const alturaLinha = Math.max(...alturas)
+        garantirEspaco(alturaLinha + 4)
+        par.forEach((img, j) => {
+          const x = MARGEM + j * (coluna + 6)
+          if (!img) {
+            doc.setFontSize(9)
+            doc.setTextColor(...COR_SUAVE)
+            doc.text('Foto indisponível', x, y + 8)
+            return
+          }
+          // encaixa a foto na célula sem distorcer
+          let largura = coluna
+          let altura = (img.altura / img.largura) * largura
+          if (altura > alturaMax) {
+            altura = alturaMax
+            largura = (img.largura / img.altura) * altura
+          }
+          doc.addImage(img.dados, 'JPEG', x, y, largura, altura)
+        })
+        y += alturaLinha + 4
+      }
+      y += 2
+    }
+  }
 
   // ---- Rodapé com paginação ----
   const paginas = doc.getNumberOfPages()

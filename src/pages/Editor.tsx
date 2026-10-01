@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Opcoes, Secao, StatusBadge } from '../components/ui'
 import { api, nomeArquivo } from '../lib/api'
 import { useConfirmar } from '../components/Confirmacao'
+import Fotos from '../components/Fotos'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { hojeISO, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
 import { useConfig } from '../lib/configContexto'
@@ -29,6 +30,8 @@ function orcamentoInicial(config: Configuracoes): OrcamentoNovo {
     custos: [],
     pagamento_forma: 'a_vista',
     pagamento_parcelas: 1,
+    fotos: [],
+    pdf_fotos: false,
     condicoes: config.condicoes_padrao,
     observacoes: '',
   }
@@ -43,6 +46,9 @@ function copiaDe(o: Orcamento): OrcamentoNovo {
     data_emissao: hojeISO(),
     itens: o.itens.map((i) => ({ ...i, id: novoId() })),
     custos: o.custos.map((c) => ({ ...c, id: novoId() })),
+    // as fotos são do serviço original: a cópia começa sem fotos
+    fotos: [],
+    pdf_fotos: false,
   }
 }
 
@@ -147,6 +153,10 @@ export default function Editor() {
       const itens = atual.itens.filter((i) => i.descricao.trim() || i.valor_unitario)
       const custos = atual.custos.filter((c) => c.valor || c.descricao.trim())
       const salvo = await api.salvar({ ...atual, itens, custos })
+      // fotos removidas na tela só são apagadas de vez depois de salvar
+      const anteriores: Orcamento | null = salvoJson ? JSON.parse(salvoJson) : null
+      const mantidas = new Set(salvo.fotos.map((f) => f.ref))
+      for (const f of anteriores?.fotos ?? []) if (!mantidas.has(f.ref)) void api.excluirFoto(f.ref)
       setO(salvo)
       setSalvoJson(JSON.stringify(salvo))
       if (!atual.id) {
@@ -169,7 +179,7 @@ export default function Editor() {
     setOcupado('pdf')
     try {
       const { gerarPdf } = await import('../lib/pdf')
-      const blob = gerarPdf(salvo, config)
+      const blob = await gerarPdf(salvo, config, (ref) => api.urlFoto(ref))
       const nome = `${nomeArquivo(salvo)}.pdf`
       const arquivo = new File([blob], nome, { type: 'application/pdf' })
       let feito = false
@@ -201,13 +211,15 @@ export default function Editor() {
 
   async function excluir() {
     if (!atual.id) return navigate('/')
-    const ok = await confirmar(`Excluir ${numeroFormatado(atual.numero)} de ${atual.cliente_nome}? Isso não pode ser desfeito.`, {
+    const ok = await confirmar(`Excluir ${numeroFormatado(atual.numero)} de ${atual.cliente_nome}?${atual.fotos.length ? ' As fotos também serão apagadas.' : ''} Isso não pode ser desfeito.`, {
       confirmar: 'Excluir',
       perigo: true,
     })
     if (!ok) return
     try {
       await api.excluir(atual.id)
+      const anteriores: Orcamento | null = salvoJson ? JSON.parse(salvoJson) : null
+      for (const f of [...(anteriores?.fotos ?? []), ...atual.fotos]) void api.excluirFoto(f.ref)
       navigate('/', { replace: true })
     } catch (e) {
       setAviso(`Erro ao excluir: ${(e as Error).message}`)
@@ -509,6 +521,16 @@ export default function Editor() {
               />
             </Campo>
           </div>
+        </Secao>
+
+        <Secao titulo="Fotos do serviço">
+          <Fotos
+            fotos={atual.fotos}
+            aoMudar={(atualizar) => setO((a) => a && { ...a, fotos: atualizar(a.fotos) })}
+            incluirNoPdf={atual.pdf_fotos}
+            aoMudarIncluirNoPdf={(v) => alterar('pdf_fotos', v)}
+            avisar={setAviso}
+          />
         </Secao>
 
         <Secao

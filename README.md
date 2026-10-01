@@ -4,6 +4,7 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 
 - **Orçamentos** com numeração automática (ORC-0001) e status: rascunho, enviado, aprovado, em andamento, concluído e recusado.
 - Dados do cliente, local (apartamento, prédio, casa ou comércio, com bloco/apto), data e hora, itens, desconto em R$ ou %, pagamento à vista ou parcelado, condições e observações.
+- **Fotos de antes e depois** do serviço, com opção de incluir uma página de registro fotográfico no PDF.
 - **Custos internos** (produto, máquina, aluguel de equipamento, ajudante, transporte, outros) com lucro e margem. **Nunca aparecem no PDF.**
 - **PDF para o cliente aprovar**, com seus dados, PIX, serviços, total, forma de pagamento, condições, validade e campo de assinatura. No celular, o botão “Enviar PDF” abre o compartilhamento (WhatsApp, e-mail…).
 - **Resumo mensal**: faturamento, custos, lucro, margem, totais por status, custos por tipo e gráfico dos últimos 6 meses.
@@ -30,6 +31,7 @@ O sistema também roda como página privada no claude.ai, com banco de dados emb
 
 - Para gerar o arquivo da página: `npm run build:artifact` (sai em `artifact/orcamentos.html`).
 - Nessa versão, os arquivos (PDF e backup) são entregues pelo próprio Claude: no celular, abre as opções de compartilhar/salvar.
+- As fotos ficam guardadas na própria página. O backup leva só a referência delas: restaurando na mesma página, as fotos continuam lá.
 
 ## Publicar online (passo a passo)
 

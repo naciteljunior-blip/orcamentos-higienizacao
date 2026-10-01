@@ -3,6 +3,7 @@ import type { Backup, Configuracoes, Orcamento, OrcamentoEditavel } from '../typ
 import { CONFIG_PADRAO } from './constantes'
 import { hojeISO, numeroFormatado } from './calc'
 import { novoId } from './formato'
+import { blobParaDataUrl, comprimirImagem } from './imagem'
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../supabase.config'
 import { MODO_ARTIFACT, usarRecurso } from './plataforma'
 
@@ -23,6 +24,23 @@ export interface Api {
   salvarConfig(config: Configuracoes): Promise<void>
   /** Substitui todos os dados pelos do backup. */
   restaurar(backup: Backup): Promise<void>
+  /** Guarda uma foto e devolve a referência que vai no orçamento. */
+  enviarFoto(arquivo: Blob): Promise<string>
+  /** Endereço para exibir a foto. */
+  urlFoto(ref: string): string
+  /** Apaga a foto de vez (no site próprio a foto fica dentro do orçamento: nada a fazer). */
+  excluirFoto(ref: string): Promise<void>
+}
+
+/** Site próprio e modo demonstração: a foto (reduzida) fica dentro do próprio orçamento. */
+const fotosEmbutidas = {
+  async enviarFoto(arquivo: Blob) {
+    return blobParaDataUrl(await comprimirImagem(arquivo, 1024, 0.72))
+  },
+  urlFoto(ref: string) {
+    return ref
+  },
+  async excluirFoto() {},
 }
 
 /** Completa campos que faltem (ex.: configurações salvas por uma versão anterior). */
@@ -38,6 +56,8 @@ function normalizar(linha: Orcamento): Orcamento {
     desconto: Number(linha.desconto) || 0,
     itens: linha.itens ?? [],
     custos: linha.custos ?? [],
+    fotos: linha.fotos ?? [],
+    pdf_fotos: linha.pdf_fotos ?? false,
   }
 }
 
@@ -107,6 +127,7 @@ function criarApiSupabase(cliente: SupabaseClient): Api {
     async restaurar(backup) {
       await exigir(cliente.rpc('restaurar_backup', { backup }))
     },
+    ...fotosEmbutidas,
   }
 }
 
@@ -146,10 +167,11 @@ function criarApiDemo(): Api {
     async entrar() {},
     async sair() {},
     async listar() {
-      return ordenar(ler().orcamentos)
+      return ordenar(ler().orcamentos.map(normalizar))
     },
     async obter(id) {
-      return ler().orcamentos.find((o) => o.id === id) ?? null
+      const o = ler().orcamentos.find((x) => x.id === id)
+      return o ? normalizar(o) : null
     },
     async salvar(orcamento) {
       const dados = ler()
@@ -183,6 +205,7 @@ function criarApiDemo(): Api {
     async restaurar(backup) {
       gravar({ orcamentos: backup.orcamentos, configuracoes: completarConfig(backup.configuracoes) })
     },
+    ...fotosEmbutidas,
   }
 }
 
@@ -208,6 +231,19 @@ interface ColRef {
 interface DbCap {
   doc(caminho: string): DocRef
   collection(caminho: string): ColRef
+}
+interface AssetsCap {
+  upload(blob: Blob, opcoes?: { type?: string }): Promise<{ id: string; url: string }>
+  delete(ref: string): Promise<{ deleted: boolean }>
+}
+
+function erroArquivo(e: unknown): Error {
+  const codigo = (e as { code?: string })?.code
+  if (codigo === 'too_large') return new Error('Foto grande demais.')
+  if (codigo === 'quota_or_state') return new Error('O espaço para fotos acabou. Apague fotos de orçamentos antigos.')
+  if (codigo === 'rate_limited') return new Error('Muitas fotos de uma vez. Espere alguns segundos e tente de novo.')
+  if (codigo === 'unsupported_type') return new Error('Formato de imagem não suportado. Use JPG ou PNG.')
+  return new Error((e as { message?: string })?.message || 'Não foi possível enviar a foto.')
 }
 
 function erroDb(e: unknown): Error {
@@ -245,6 +281,11 @@ function criarApiArtifact(): Api {
       throw erroDb(e)
     }
   }
+
+  let promessaArquivos: Promise<AssetsCap | null> | null = null
+  const arquivos = () => (promessaArquivos ??= usarRecurso<AssetsCap>('assets'))
+  // endereço devolvido no envio (vale nesta visita); depois, o caminho fixo do arquivo
+  const urlsDaVisita = new Map<string, string>()
 
   const doc = (db: DbCap, id: string) => db.collection('orcamentos').doc(id)
   const paraDoc = (o: Orcamento) => JSON.parse(JSON.stringify(o)) as Record<string, unknown>
@@ -314,6 +355,38 @@ function criarApiArtifact(): Api {
         }
         await db.doc('config/empresa').set(JSON.parse(JSON.stringify(completarConfig(backup.configuracoes))))
       })
+    },
+    async enviarFoto(arquivo) {
+      const cap = await arquivos()
+      if (!cap) throw new Error('Envio de fotos indisponível nesta tela.')
+      const reduzida = await comprimirImagem(arquivo, 1600, 0.8)
+      const enviar = () => cap.upload(reduzida, { type: 'image/jpeg' })
+      try {
+        let r
+        try {
+          r = await enviar()
+        } catch (e) {
+          if ((e as { code?: string })?.code !== 'store_unavailable') throw e
+          await new Promise((ok) => setTimeout(ok, 800))
+          r = await enviar()
+        }
+        urlsDaVisita.set(r.id, r.url)
+        return r.id
+      } catch (e) {
+        throw erroArquivo(e)
+      }
+    },
+    urlFoto(ref) {
+      return urlsDaVisita.get(ref) ?? `/_blob/${ref}`
+    },
+    async excluirFoto(ref) {
+      const cap = await arquivos()
+      if (!cap) return
+      try {
+        await cap.delete(ref)
+      } catch {
+        // a foto já saiu do orçamento; um arquivo que sobrar não atrapalha
+      }
     },
   }
 }

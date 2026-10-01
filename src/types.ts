@@ -18,6 +18,15 @@ export interface Custo {
   valor: number
 }
 
+export type MomentoFoto = 'antes' | 'depois'
+
+export interface Foto {
+  id: string
+  momento: MomentoFoto
+  /** id do arquivo no claude.ai, ou a própria imagem (data URL) no site próprio */
+  ref: string
+}
+
 export interface Orcamento {
   id: string
   numero: number
@@ -41,6 +50,9 @@ export interface Orcamento {
   custos: Custo[]
   pagamento_forma: PagamentoForma
   pagamento_parcelas: number
+  fotos: Foto[]
+  /** inclui as fotos numa página extra do PDF */
+  pdf_fotos: boolean
   condicoes: string
   observacoes: string
   criado_em: string
