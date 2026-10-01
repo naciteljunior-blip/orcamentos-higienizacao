@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-slate-100 text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .campo {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 disabled:bg-slate-50;
+  }
+  .rotulo {
+    @apply mb-1 block text-sm font-medium text-slate-600;
+  }
+  .cartao {
+    @apply rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-base font-semibold transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-primario {
+    @apply btn bg-brand-700 text-white hover:bg-brand-800;
+  }
+  .btn-secundario {
+    @apply btn bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50;
+  }
+  .btn-perigo {
+    @apply btn bg-white text-red-700 ring-1 ring-red-200 hover:bg-red-50;
+  }
+}
