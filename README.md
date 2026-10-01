@@ -42,9 +42,9 @@ São três partes, todas gratuitas: **Supabase** (banco de dados e login), **Git
 
 ### 2. Configurar o repositório no GitHub
 
-1. No repositório, vá em **Settings → Secrets and variables → Actions → New repository secret** e crie dois segredos:
-   - `VITE_SUPABASE_URL` → a Project URL
-   - `VITE_SUPABASE_ANON_KEY` → a anon public key
+1. Informe a conexão com o Supabase de **um** destes jeitos:
+   - **Mais simples:** edite o arquivo [`src/supabase.config.ts`](src/supabase.config.ts) (dá para editar pelo próprio site do GitHub, no ícone de lápis) e preencha `SUPABASE_URL` e `SUPABASE_ANON_KEY`.
+   - **Ou** em **Settings → Secrets and variables → Actions → New repository secret**, crie os segredos `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 2. Vá em **Settings → Pages** e, em **Source**, escolha **GitHub Actions**.
 
 > O GitHub Pages gratuito só funciona com repositório **público**. Isso é seguro: o código não tem nenhum dado seu — orçamentos, clientes e configurações ficam no Supabase, protegidos pelo login. Se preferir manter o repositório privado, é preciso um plano pago do GitHub (ou publicar na Vercel/Netlify, que aceitam repositório privado de graça).
@@ -65,7 +65,7 @@ Abra o endereço no celular e:
 
 - No plano gratuito, o Supabase **pausa o projeto depois de 7 dias sem nenhum acesso**. Os dados não se perdem: basta entrar no painel do Supabase e clicar em **Restore project**. Usando o sistema toda semana, isso não acontece.
 - Faça um **backup** de vez em quando em **Ajustes → Baixar backup** e guarde o arquivo no Google Drive. A restauração **substitui** todos os dados atuais pelos do arquivo.
-- Se o site abrir com a faixa amarela “Modo demonstração”, os segredos do passo 2 não foram configurados: os dados estão sendo salvos só naquele aparelho.
+- Se o site abrir com a faixa amarela “Modo demonstração”, a conexão do passo 2 não foi configurada: os dados estão sendo salvos só naquele aparelho.
 
 ---
 

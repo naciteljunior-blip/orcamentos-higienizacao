@@ -3,6 +3,7 @@ import type { Backup, Configuracoes, Orcamento, OrcamentoEditavel } from '../typ
 import { CONFIG_PADRAO } from './constantes'
 import { hojeISO, numeroFormatado } from './calc'
 import { novoId } from './formato'
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../supabase.config'
 
 export interface Api {
   /** 'demo' quando o Supabase não está configurado: tudo fica só neste navegador. */
@@ -183,8 +184,8 @@ function criarApiDemo(): Api {
   }
 }
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const chave = import.meta.env.VITE_SUPABASE_ANON_KEY
+const url = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL
+const chave = import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY
 
 export const api: Api = url && chave ? criarApiSupabase(createClient(url, chave)) : criarApiDemo()
 
