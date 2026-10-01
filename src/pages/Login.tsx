@@ -3,6 +3,23 @@ import { Erro } from '../components/ui'
 import { api } from '../lib/api'
 
 export default function Login() {
+  if (api.modo === 'artifact') {
+    return (
+      <main className="flex min-h-dvh items-center justify-center p-4">
+        <div className="cartao w-full max-w-sm space-y-2 p-6 text-center">
+          <h1 className="text-xl font-bold">Orçamentos</h1>
+          <p className="text-sm text-slate-600">
+            Não foi possível acessar o banco de dados. Abra esta página pelo claude.ai com a sua conta conectada e
+            recarregue.
+          </p>
+        </div>
+      </main>
+    )
+  }
+  return <LoginSupabase />
+}
+
+function LoginSupabase() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string | null>(null)

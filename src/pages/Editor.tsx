@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Opcoes, Secao, StatusBadge } from '../components/ui'
 import { api, nomeArquivo } from '../lib/api'
-import { baixarArquivo } from '../lib/backup'
+import { useConfirmar } from '../components/Confirmacao'
+import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { hojeISO, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
 import { useConfig } from '../lib/configContexto'
 import { CUSTO_ROTULO, CUSTO_TIPOS, LOCAL_ROTULO, LOCAL_TIPOS, STATUS, STATUS_ROTULO } from '../lib/constantes'
@@ -52,6 +53,7 @@ export default function Editor() {
   const navigate = useNavigate()
   const location = useLocation()
   const { config, carregada } = useConfig()
+  const confirmar = useConfirmar()
 
   const [o, setO] = useState<OrcamentoEditavel | null>(null)
   const [salvoJson, setSalvoJson] = useState('')
@@ -171,7 +173,8 @@ export default function Editor() {
       const nome = `${nomeArquivo(salvo)}.pdf`
       const arquivo = new File([blob], nome, { type: 'application/pdf' })
       let feito = false
-      if (modo === 'compartilhar' && navigator.canShare?.({ files: [arquivo] })) {
+      // no claude.ai o compartilhamento do navegador não existe: o salvamento do app já abre as opções de envio
+      if (!MODO_ARTIFACT && modo === 'compartilhar' && navigator.canShare?.({ files: [arquivo] })) {
         try {
           await navigator.share({ files: [arquivo], title: nome })
           feito = true
@@ -180,8 +183,11 @@ export default function Editor() {
           // compartilhamento indisponível: baixa o arquivo
         }
       }
-      if (!feito) baixarArquivo(blob, nome)
-      if (salvo.status === 'rascunho' && window.confirm('PDF gerado. Marcar este orçamento como "Enviado"?')) {
+      if (!feito && !(await salvarArquivo(blob, nome))) return
+      if (
+        salvo.status === 'rascunho' &&
+        (await confirmar('PDF gerado. Marcar este orçamento como "Enviado"?', { confirmar: 'Marcar como enviado' }))
+      ) {
         const enviado = await api.salvar({ ...salvo, status: 'enviado' })
         setO(enviado)
         setSalvoJson(JSON.stringify(enviado))
@@ -195,7 +201,11 @@ export default function Editor() {
 
   async function excluir() {
     if (!atual.id) return navigate('/')
-    if (!window.confirm(`Excluir ${numeroFormatado(atual.numero)} de ${atual.cliente_nome}? Isso não pode ser desfeito.`)) return
+    const ok = await confirmar(`Excluir ${numeroFormatado(atual.numero)} de ${atual.cliente_nome}? Isso não pode ser desfeito.`, {
+      confirmar: 'Excluir',
+      perigo: true,
+    })
+    if (!ok) return
     try {
       await api.excluir(atual.id)
       navigate('/', { replace: true })
@@ -204,8 +214,9 @@ export default function Editor() {
     }
   }
 
-  function duplicar() {
-    if (alterado && !window.confirm('Há alterações não salvas. Duplicar mesmo assim (a cópia usa o que está na tela)?')) return
+  async function duplicar() {
+    if (alterado && !(await confirmar('Há alterações não salvas. Duplicar mesmo assim? A cópia usa o que está na tela.', { confirmar: 'Duplicar' })))
+      return
     navigate('/orcamento/novo', { state: { copiaDe: atual } })
   }
 
@@ -571,7 +582,7 @@ export default function Editor() {
           <button type="button" className="btn-secundario" onClick={() => void gerarPdf('baixar')} disabled={ocupado !== null}>
             Baixar PDF
           </button>
-          <button type="button" className="btn-secundario" onClick={duplicar} disabled={!atual.id}>
+          <button type="button" className="btn-secundario" onClick={() => void duplicar()} disabled={!atual.id}>
             Duplicar
           </button>
           <button type="button" className="btn-perigo" onClick={() => void excluir()}>
@@ -599,13 +610,17 @@ export default function Editor() {
 }
 
 function Voltar({ alterado = false }: { alterado?: boolean }) {
+  const confirmar = useConfirmar()
+  const navigate = useNavigate()
   return (
     <Link
       to="/"
       aria-label="Voltar para a lista"
       className="-ml-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100"
       onClick={(e) => {
-        if (alterado && !window.confirm('Sair sem salvar as alterações?')) e.preventDefault()
+        if (!alterado) return
+        e.preventDefault()
+        void confirmar('Sair sem salvar as alterações?', { confirmar: 'Sair sem salvar', perigo: true }).then((sim) => sim && navigate('/'))
       }}
     >
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

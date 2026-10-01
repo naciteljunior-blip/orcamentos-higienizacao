@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:artifact": "tsc -b && vite build --mode artifact && node scripts/artifact.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
@@ -33,6 +34,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.0",
     "vite": "^5.4.21",
+    "vite-plugin-singlefile": "^2.0.3",
     "vitest": "^2.1.9"
   }
 }

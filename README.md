@@ -24,6 +24,13 @@ Custos e lucro do mês consideram os mesmos orçamentos do faturamento. Um orça
 
 ---
 
+## Versão no claude.ai (sem configuração)
+
+O sistema também roda como página privada no claude.ai, com banco de dados embutido: não precisa de Supabase nem de GitHub Pages, e só o dono da página acessa os dados.
+
+- Para gerar o arquivo da página: `npm run build:artifact` (sai em `artifact/orcamentos.html`).
+- Nessa versão, os arquivos (PDF e backup) são entregues pelo próprio Claude: no celular, abre as opções de compartilhar/salvar.
+
 ## Publicar online (passo a passo)
 
 São três partes, todas gratuitas: **Supabase** (banco de dados e login), **GitHub** (código) e **GitHub Pages** (o site).

@@ -1,6 +1,7 @@
 import type { Backup, Configuracoes, Orcamento } from '../types'
 import { STATUS } from './constantes'
 import { hojeISO } from './calc'
+import { salvarArquivo } from './plataforma'
 
 export function montarBackup(configuracoes: Configuracoes, orcamentos: Orcamento[]): Backup {
   return {
@@ -12,20 +13,9 @@ export function montarBackup(configuracoes: Configuracoes, orcamentos: Orcamento
   }
 }
 
-export function baixarArquivo(conteudo: Blob, nome: string) {
-  const url = URL.createObjectURL(conteudo)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = nome
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
-
-export function baixarBackup(backup: Backup) {
+export function baixarBackup(backup: Backup): Promise<boolean> {
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-  baixarArquivo(blob, `backup-orcamentos-${hojeISO()}.json`)
+  return salvarArquivo(blob, `backup-orcamentos-${hojeISO()}.json`)
 }
 
 /** Lê e confere um arquivo de backup. Lança erro com mensagem amigável se for inválido. */

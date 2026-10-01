@@ -4,10 +4,12 @@ import { CONFIG_PADRAO } from './constantes'
 import { hojeISO, numeroFormatado } from './calc'
 import { novoId } from './formato'
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../supabase.config'
+import { MODO_ARTIFACT, usarRecurso } from './plataforma'
 
 export interface Api {
-  /** 'demo' quando o Supabase não está configurado: tudo fica só neste navegador. */
-  modo: 'supabase' | 'demo'
+  /** 'demo' quando o Supabase não está configurado: tudo fica só neste navegador.
+   *  'artifact' na página publicada no claude.ai, com o banco embutido dela. */
+  modo: 'supabase' | 'demo' | 'artifact'
   /** E-mail do usuário logado, ou null. */
   usuarioAtual(): Promise<string | null>
   aoMudarLogin(callback: (email: string | null) => void): () => void
@@ -184,10 +186,146 @@ function criarApiDemo(): Api {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Página no claude.ai: banco embutido da própria página (capability `db`).
+// Só o dono da página lê e grava (regra declarada na publicação).
+// ---------------------------------------------------------------------------
+
+interface DocSnap {
+  id: string
+  exists: boolean
+  data(): Record<string, unknown> | undefined
+}
+interface DocRef {
+  get(): Promise<DocSnap>
+  set(dados: Record<string, unknown>): Promise<void>
+  delete(): Promise<void>
+}
+interface ColRef {
+  doc(id: string): DocRef
+  limit(n: number): { get(): Promise<{ docs: DocSnap[] }> }
+}
+interface DbCap {
+  doc(caminho: string): DocRef
+  collection(caminho: string): ColRef
+}
+
+function erroDb(e: unknown): Error {
+  const codigo = (e as { code?: string })?.code
+  if (codigo === 'quota_exceeded') return new Error('O espaço do banco acabou. Exclua orçamentos antigos (depois de baixar um backup).')
+  if (codigo === 'invalid_argument') return new Error('Só o dono desta página pode alterar os dados.')
+  if (codigo === 'revoked' || codigo === 'not_granted') return new Error('O acesso ao banco foi encerrado. Recarregue a página.')
+  return new Error((e as { message?: string })?.message || 'Falha ao acessar o banco. Tente de novo.')
+}
+
+function criarApiArtifact(): Api {
+  let promessa: Promise<DbCap | null> | null = null
+  const banco = () => (promessa ??= usarRecurso<DbCap>('db'))
+
+  async function exigirBanco(): Promise<DbCap> {
+    const db = await banco()
+    if (!db) throw new Error('Banco indisponível. Abra a página pelo claude.ai, com sua conta conectada.')
+    return db
+  }
+
+  async function executar<T>(acao: (db: DbCap) => Promise<T>): Promise<T> {
+    const db = await exigirBanco()
+    try {
+      return await acao(db)
+    } catch (e) {
+      if ((e as { code?: string })?.code === 'unavailable') {
+        // instabilidade passageira: tenta mais uma vez
+        await new Promise((r) => setTimeout(r, 500 + Math.random() * 1000))
+        try {
+          return await acao(db)
+        } catch (e2) {
+          throw erroDb(e2)
+        }
+      }
+      throw erroDb(e)
+    }
+  }
+
+  const doc = (db: DbCap, id: string) => db.collection('orcamentos').doc(id)
+  const paraDoc = (o: Orcamento) => JSON.parse(JSON.stringify(o)) as Record<string, unknown>
+
+  async function todos(db: DbCap): Promise<Orcamento[]> {
+    const snap = await db.collection('orcamentos').limit(1000).get()
+    return snap.docs.filter((d) => d.exists).map((d) => normalizar(d.data() as unknown as Orcamento))
+  }
+
+  return {
+    modo: 'artifact',
+    async usuarioAtual() {
+      return (await banco()) ? 'claude' : null
+    },
+    aoMudarLogin() {
+      return () => {}
+    },
+    async entrar() {},
+    async sair() {},
+    async listar() {
+      return ordenar(await executar(todos))
+    },
+    async obter(id) {
+      return executar(async (db) => {
+        const snap = await doc(db, id).get()
+        return snap.exists ? normalizar(snap.data() as unknown as Orcamento) : null
+      })
+    },
+    async salvar(orcamento) {
+      return executar(async (db) => {
+        const agora = new Date().toISOString()
+        let salvo: Orcamento
+        if (orcamento.id) {
+          const atual = await doc(db, orcamento.id).get()
+          if (!atual.exists) throw new Error('Este orçamento foi excluído.')
+          const antigo = atual.data() as unknown as Orcamento
+          salvo = { ...antigo, ...orcamento, id: antigo.id, numero: antigo.numero, criado_em: antigo.criado_em, atualizado_em: agora }
+        } else {
+          const numero = (await todos(db)).reduce((max, o) => Math.max(max, o.numero), 0) + 1
+          salvo = { ...orcamento, id: novoId(), numero, criado_em: agora, atualizado_em: agora }
+        }
+        await doc(db, salvo.id).set(paraDoc(salvo))
+        return salvo
+      })
+    },
+    async excluir(id) {
+      await executar((db) => doc(db, id).delete())
+    },
+    async obterConfig() {
+      return executar(async (db) => {
+        const snap = await db.doc('config/empresa').get()
+        return completarConfig(snap.exists ? (snap.data() as Partial<Configuracoes>) : null)
+      })
+    },
+    async salvarConfig(config) {
+      await executar((db) => db.doc('config/empresa').set(JSON.parse(JSON.stringify(config))))
+    },
+    async restaurar(backup) {
+      await executar(async (db) => {
+        const manter = new Set(backup.orcamentos.map((o) => o.id))
+        for (const o of await todos(db)) {
+          if (!manter.has(o.id)) await doc(db, o.id).delete()
+        }
+        for (const o of backup.orcamentos) {
+          const completo = { ...o, id: o.id || novoId() }
+          await doc(db, completo.id).set(paraDoc(completo))
+        }
+        await db.doc('config/empresa').set(JSON.parse(JSON.stringify(completarConfig(backup.configuracoes))))
+      })
+    },
+  }
+}
+
 const url = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL
 const chave = import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY
 
-export const api: Api = url && chave ? criarApiSupabase(createClient(url, chave)) : criarApiDemo()
+export const api: Api = MODO_ARTIFACT
+  ? criarApiArtifact()
+  : url && chave
+    ? criarApiSupabase(createClient(url, chave))
+    : criarApiDemo()
 
 export function nomeArquivo(orcamento: Pick<Orcamento, 'numero' | 'cliente_nome'>): string {
   const cliente = orcamento.cliente_nome.trim().replace(/[\\/:*?"<>|]/g, '').slice(0, 40)

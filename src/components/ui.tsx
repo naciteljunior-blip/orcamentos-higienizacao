@@ -182,7 +182,7 @@ export function Aviso({ texto, aoFechar }: { texto: string | null; aoFechar: () 
 
 export function Cabecalho({ titulo, esquerda, direita }: { titulo: ReactNode; esquerda?: ReactNode; direita?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-[env(safe-area-inset-top,0px)] z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-4">
         {esquerda}
         <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{titulo}</h1>

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, MemoryRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ProvedorConfirmacao } from './components/Confirmacao'
 import Layout from './components/Layout'
 import { Carregando } from './components/ui'
 import { api } from './lib/api'
 import { ProvedorConfig } from './lib/configContexto'
+import { MODO_ARTIFACT } from './lib/plataforma'
 import Configuracoes from './pages/Configuracoes'
 import Editor from './pages/Editor'
 import Lista from './pages/Lista'
@@ -21,9 +23,13 @@ export default function App() {
   if (usuario === undefined) return <Carregando />
   if (usuario === null) return <Login />
 
+  // HashRouter: as rotas ficam depois do "#", o que funciona no GitHub Pages sem configuração extra.
+  // Na página do claude.ai as rotas ficam só na memória.
+  const Roteador = MODO_ARTIFACT ? MemoryRouter : HashRouter
+
   return (
-    // HashRouter: as rotas ficam depois do "#", o que funciona no GitHub Pages sem configuração extra
-    <HashRouter>
+    <Roteador>
+      <ProvedorConfirmacao>
       <ProvedorConfig>
         <Routes>
           <Route element={<Layout />}>
@@ -36,6 +42,7 @@ export default function App() {
           </Route>
         </Routes>
       </ProvedorConfig>
-    </HashRouter>
+      </ProvedorConfirmacao>
+    </Roteador>
   )
 }

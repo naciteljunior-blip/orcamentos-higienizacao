@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Secao } from '../components/ui'
+import { useConfirmar } from '../components/Confirmacao'
 import { api } from '../lib/api'
 import { baixarBackup, lerBackup, montarBackup } from '../lib/backup'
 import { useConfig } from '../lib/configContexto'
@@ -19,8 +20,15 @@ function lerLogo(arquivo: File): Promise<string> {
         const canvas = document.createElement('canvas')
         canvas.width = Math.round(img.width * escala)
         canvas.height = Math.round(img.height * escala)
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/png'))
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        const png = canvas.toDataURL('image/png')
+        if (png.length <= 150_000) return resolve(png)
+        // foto grande: JPEG fica bem menor (fundo branco no lugar da transparência)
+        ctx.globalCompositeOperation = 'destination-over'
+        ctx.fillStyle = '#fff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.85))
       }
       img.src = leitor.result as string
     }
@@ -30,6 +38,7 @@ function lerLogo(arquivo: File): Promise<string> {
 
 export default function Configuracoes({ usuario }: { usuario: string }) {
   const { config, carregada, erro, recarregar, salvar } = useConfig()
+  const confirmar = useConfirmar()
   const [form, setForm] = useState<Config>(config)
   const [salvando, setSalvando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -59,8 +68,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
 
   async function exportar() {
     try {
-      baixarBackup(montarBackup(config, await api.listar()))
-      setAviso('Backup baixado')
+      if (await baixarBackup(montarBackup(config, await api.listar()))) setAviso('Backup salvo')
     } catch (e) {
       setAviso(`Erro ao gerar backup: ${(e as Error).message}`)
     }
@@ -71,10 +79,11 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
     try {
       const backup = lerBackup(await arquivo.text())
       const atuais = await api.listar()
-      const ok = window.confirm(
+      const ok = await confirmar(
         `Restaurar o backup de ${new Date(backup.exportado_em).toLocaleString('pt-BR')}?\n\n` +
           `Os ${atuais.length} orçamentos atuais e as configurações serão SUBSTITUÍDOS ` +
           `pelos ${backup.orcamentos.length} orçamentos do arquivo.\n\nDica: baixe um backup antes, por segurança.`,
+        { confirmar: 'Restaurar', perigo: true },
       )
       if (!ok) return
       await api.restaurar(backup)

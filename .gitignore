@@ -9,3 +9,5 @@ dist-ssr
 .DS_Store
 *.log
 .env
+dist-artifact
+artifact
