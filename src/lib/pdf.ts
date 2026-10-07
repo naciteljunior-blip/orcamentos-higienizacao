@@ -191,7 +191,13 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
   // ---- Pagamento ----
   titulo('Forma de pagamento')
   paragrafo(textoPagamento(o, valorTotal), 10)
-  if (config.pix) paragrafo(`Chave PIX: ${config.pix}`, 10)
+  if (config.pix) {
+    paragrafo(`Chave PIX: ${config.pix}`, 10)
+    const conta = [config.pix_titular && `Titular: ${config.pix_titular}`, config.pix_banco && `Banco: ${config.pix_banco}`]
+      .filter(Boolean)
+      .join('  |  ')
+    if (conta) paragrafo(conta, 10)
+  }
 
   if (o.condicoes.trim()) {
     titulo('Condições')

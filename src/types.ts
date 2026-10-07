@@ -76,6 +76,9 @@ export interface Configuracoes {
   email: string
   endereco: string
   pix: string
+  /** nome de quem recebe o PIX, para o cliente conferir */
+  pix_titular: string
+  pix_banco: string
   /** imagem em data URL (já reduzida) */
   logo: string
   condicoes_padrao: string

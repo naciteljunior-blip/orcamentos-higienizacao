@@ -55,6 +55,8 @@ export const CONFIG_PADRAO: Configuracoes = {
   email: '',
   endereco: '',
   pix: '',
+  pix_titular: '',
+  pix_banco: '',
   logo: '',
   condicoes_padrao:
     'Pagamento via PIX, dinheiro ou cartão.\n' +

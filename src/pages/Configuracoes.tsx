@@ -106,7 +106,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
     )
   }
 
-  const texto = (campo: 'empresa_nome' | 'documento' | 'telefone' | 'email' | 'endereco' | 'pix') => ({
+  const texto = (campo: 'empresa_nome' | 'documento' | 'telefone' | 'email' | 'endereco' | 'pix' | 'pix_titular' | 'pix_banco') => ({
     value: form[campo],
     onChange: (e: ChangeEvent<HTMLInputElement>) => alterar(campo, e.target.value),
   })
@@ -133,8 +133,16 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
               <Campo rotulo="E-mail">
                 <input className="campo" type="email" inputMode="email" {...texto('email')} />
               </Campo>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
               <Campo rotulo="Chave PIX">
-                <input className="campo" {...texto('pix')} />
+                <input className="campo" placeholder="Celular, CPF, CNPJ, e-mail…" {...texto('pix')} />
+              </Campo>
+              <Campo rotulo="Titular da conta">
+                <input className="campo" {...texto('pix_titular')} />
+              </Campo>
+              <Campo rotulo="Banco">
+                <input className="campo" {...texto('pix_banco')} />
               </Campo>
             </div>
             <Campo rotulo="Endereço ou cidade (opcional)">
