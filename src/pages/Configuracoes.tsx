@@ -195,14 +195,34 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
                 aoMudar={(v) => alterar('validade_padrao', Math.max(0, Math.round(v)))}
               />
             </Campo>
-            <Campo rotulo="Condições padrão">
+            <Campo rotulo="Condições padrão — higienização">
               <textarea
                 className="campo min-h-36"
                 value={form.condicoes_padrao}
                 onChange={(e) => alterar('condicoes_padrao', e.target.value)}
               />
             </Campo>
+            <Campo rotulo="Condições padrão — impressão 3D">
+              <textarea
+                className="campo min-h-36"
+                value={form.condicoes_padrao_3d}
+                onChange={(e) => alterar('condicoes_padrao_3d', e.target.value)}
+              />
+            </Campo>
           </div>
+        </Secao>
+
+        <Secao titulo="Impressão 3D">
+          <Campo rotulo="Quanto você paga no filamento (por kg)" className="max-w-56">
+            <CampoNumero
+              valor={form.filamento_preco_kg}
+              prefixo="R$"
+              aoMudar={(v) => alterar('filamento_preco_kg', Math.max(0, v))}
+            />
+          </Campo>
+          <p className="mt-2 text-sm text-slate-500">
+            Com esse valor, o orçamento de impressão 3D calcula o custo do filamento pelos kg informados. Não aparece no PDF.
+          </p>
         </Secao>
 
         <Secao titulo="Catálogo de serviços">

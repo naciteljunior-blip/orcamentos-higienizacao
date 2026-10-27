@@ -14,11 +14,13 @@ import {
 import { dataBR, lerNumero, linkWhatsApp, reais } from './formato'
 import { lerBackup, montarBackup } from './backup'
 import { CONFIG_PADRAO } from './constantes'
+import { textoPagamento } from './pdf'
 
 function orc(parcial: Partial<Orcamento>): Orcamento {
   return {
     id: Math.random().toString(36),
     numero: 1,
+    tipo: 'higienizacao',
     status: 'rascunho',
     cliente_nome: 'Cliente',
     cliente_telefone: '',
@@ -38,6 +40,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     pagamento_parcelas: 1,
     fotos: [],
     pdf_fotos: false,
+    impressao: { descricao: '', unidades: 1, prazo_dias: 7, filamento_kg: 0, nfc: false },
     condicoes: '',
     observacoes: '',
     criado_em: '',
@@ -162,5 +165,25 @@ describe('backup', () => {
     expect(() => lerBackup('{"foo":1}')).toThrow(/não é um backup/)
     const repetido = montarBackup(CONFIG_PADRAO, [orc({ numero: 1 }), orc({ numero: 1 })])
     expect(() => lerBackup(JSON.stringify(repetido))).toThrow(/repetido/)
+  })
+})
+
+describe('impressão 3D', () => {
+  it('soma o filamento nos custos por tipo do resumo', () => {
+    const lista = [
+      orc({ tipo: 'impressao3d', status: 'aprovado', itens: [item(10, 15)], custos: [custo('filamento', 36), custo('outros', 4)] }),
+      orc({ status: 'concluido', itens: [item(1, 200)], custos: [custo('produto', 20)] }),
+    ]
+    const r = resumoDoMes(lista, 2026, 9)
+    expect(r.faturamento).toBe(350)
+    expect(r.custosPorTipo).toMatchObject({ filamento: 36, outros: 4, produto: 20 })
+    const so3d = resumoDoMes(lista.filter((o) => o.tipo === 'impressao3d'), 2026, 9)
+    expect(so3d.faturamento).toBe(150)
+    expect(so3d.lucro).toBe(110)
+  })
+
+  it('não fala em "ato do serviço" no pagamento à vista', () => {
+    expect(textoPagamento({ tipo: 'impressao3d', pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, 150)).toBe(`À vista: ${reais(150)}`)
+    expect(textoPagamento({ tipo: 'higienizacao', pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, 150)).toContain('no ato do serviço')
   })
 })

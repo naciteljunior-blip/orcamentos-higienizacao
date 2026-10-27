@@ -12,6 +12,13 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **Backup e restauração** em arquivo `.json`.
 - Login com e-mail e senha: só você acessa.
 
+## Impressão 3D
+
+Ao tocar em **Novo orçamento**, escolha **Higienização** ou **Impressão 3D**. O orçamento de impressão 3D troca "Local e data" por:
+o que será feito, unidades, prazo (dias após a aprovação), filamento total (kg) e se tem tag NFC. Tudo isso sai no PDF.
+Em **Ajustes**, informe quanto paga no kg do filamento para lançar o custo interno com um toque. O resumo mensal pode ser filtrado por tipo.
+Quem já usa o Supabase precisa rodar `supabase/schema.sql` de novo (não apaga dados).
+
 ## Como os números são calculados
 
 | Conta | Fórmula |

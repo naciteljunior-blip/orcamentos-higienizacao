@@ -23,11 +23,11 @@ function formatoImagem(dataUrl: string): 'PNG' | 'JPEG' | null {
   return null
 }
 
-export function textoPagamento(o: Pick<Orcamento, 'pagamento_forma' | 'pagamento_parcelas'>, valorTotal: number): string {
+export function textoPagamento(o: Pick<Orcamento, 'tipo' | 'pagamento_forma' | 'pagamento_parcelas'>, valorTotal: number): string {
   if (o.pagamento_forma === 'parcelado' && o.pagamento_parcelas > 1) {
     return `Parcelado em ${o.pagamento_parcelas}x de ${reais(valorParcela(valorTotal, o.pagamento_parcelas))}`
   }
-  return `À vista, no ato do serviço: ${reais(valorTotal)}`
+  return o.tipo === 'impressao3d' ? `À vista: ${reais(valorTotal)}` : `À vista, no ato do serviço: ${reais(valorTotal)}`
 }
 
 export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (ref: string) => string): Promise<Blob> {
@@ -142,16 +142,29 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
     ['E-mail', o.cliente_email],
   ])
 
-  titulo('Local e data do serviço')
-  pares([
-    ['Tipo de local', LOCAL_ROTULO[o.local_tipo]],
-    ['Data e hora', dataHoraBR(o.data_servico, o.hora_servico) || 'A combinar'],
-    ['Endereço', o.endereco],
-    ['Bloco / Apto / Complemento', o.complemento],
-  ])
+  const e3d = o.tipo === 'impressao3d'
+  if (e3d) {
+    const imp = o.impressao
+    titulo('Impressão 3D')
+    if (imp.descricao.trim()) paragrafo(imp.descricao, 10)
+    pares([
+      ['Unidades', String(imp.unidades)],
+      ['Prazo de entrega', imp.prazo_dias ? `${imp.prazo_dias} dias após a aprovação` : 'A combinar'],
+      ['Filamento total', imp.filamento_kg ? `${decimal(imp.filamento_kg)} kg` : ''],
+      ['Tag NFC', imp.nfc ? 'Sim' : 'Não'],
+    ])
+  } else {
+    titulo('Local e data do serviço')
+    pares([
+      ['Tipo de local', LOCAL_ROTULO[o.local_tipo]],
+      ['Data e hora', dataHoraBR(o.data_servico, o.hora_servico) || 'A combinar'],
+      ['Endereço', o.endereco],
+      ['Bloco / Apto / Complemento', o.complemento],
+    ])
+  }
 
   // ---- Serviços ----
-  titulo('Serviços')
+  titulo(e3d ? 'Valores' : 'Serviços')
   autoTable(doc, {
     startY: y,
     margin: { left: MARGEM, right: MARGEM },
@@ -241,7 +254,10 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
     y += 12
     const coluna = (UTIL - 6) / 2
     const alturaMax = 75
-    for (const [momento, rotulo] of [['antes', 'Antes do serviço'], ['depois', 'Depois do serviço']] as const) {
+    const grupos = e3d
+      ? ([['antes', 'Referência'], ['depois', 'Peça pronta']] as const)
+      : ([['antes', 'Antes do serviço'], ['depois', 'Depois do serviço']] as const)
+    for (const [momento, rotulo] of grupos) {
       const lista = o.fotos.filter((f) => f.momento === momento)
       if (!lista.length) continue
       titulo(rotulo)

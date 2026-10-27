@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Backup, Configuracoes, Orcamento, OrcamentoEditavel } from '../types'
-import { CONFIG_PADRAO } from './constantes'
+import { CONFIG_PADRAO, IMPRESSAO_PADRAO } from './constantes'
 import { hojeISO, numeroFormatado } from './calc'
 import { novoId } from './formato'
 import { blobParaDataUrl, comprimirImagem } from './imagem'
@@ -52,6 +52,8 @@ export function completarConfig(dados: Partial<Configuracoes> | null | undefined
 function normalizar(linha: Orcamento): Orcamento {
   return {
     ...linha,
+    tipo: linha.tipo ?? 'higienizacao',
+    impressao: { ...IMPRESSAO_PADRAO, ...(linha.impressao ?? {}) },
     hora_servico: linha.hora_servico ? linha.hora_servico.slice(0, 5) : null,
     desconto: Number(linha.desconto) || 0,
     itens: linha.itens ?? [],

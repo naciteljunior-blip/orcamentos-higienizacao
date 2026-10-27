@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Opcoes, Secao, StatusBadge } from '../components/ui'
 import { api, nomeArquivo } from '../lib/api'
 import { useConfirmar } from '../components/Confirmacao'
@@ -7,12 +7,13 @@ import Fotos from '../components/Fotos'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { hojeISO, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
 import { useConfig } from '../lib/configContexto'
-import { CUSTO_ROTULO, CUSTO_TIPOS, LOCAL_ROTULO, LOCAL_TIPOS, STATUS, STATUS_ROTULO } from '../lib/constantes'
-import { dataBR, linkWhatsApp, novoId, porcentagem, reais } from '../lib/formato'
-import type { Configuracoes, Custo, Item, Orcamento, OrcamentoEditavel, OrcamentoNovo } from '../types'
+import { CUSTO_ROTULO, CUSTO_TIPOS, IMPRESSAO_PADRAO, LOCAL_ROTULO, LOCAL_TIPOS, STATUS, STATUS_ROTULO, TIPO_ROTULO } from '../lib/constantes'
+import { dataBR, decimal, linkWhatsApp, novoId, porcentagem, reais } from '../lib/formato'
+import type { Configuracoes, Custo, Impressao, Item, Orcamento, OrcamentoEditavel, OrcamentoNovo, TipoOrcamento } from '../types'
 
-function orcamentoInicial(config: Configuracoes): OrcamentoNovo {
+function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): OrcamentoNovo {
   return {
+    tipo,
     status: 'rascunho',
     cliente_nome: '',
     cliente_telefone: '',
@@ -32,7 +33,8 @@ function orcamentoInicial(config: Configuracoes): OrcamentoNovo {
     pagamento_parcelas: 1,
     fotos: [],
     pdf_fotos: false,
-    condicoes: config.condicoes_padrao,
+    impressao: { ...IMPRESSAO_PADRAO },
+    condicoes: tipo === 'impressao3d' ? config.condicoes_padrao_3d : config.condicoes_padrao,
     observacoes: '',
   }
 }
@@ -58,6 +60,8 @@ export default function Editor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const [params] = useSearchParams()
+  const tipoNovo: TipoOrcamento = params.get('tipo') === 'impressao3d' ? 'impressao3d' : 'higienizacao'
   const { config, carregada } = useConfig()
   const confirmar = useConfirmar()
 
@@ -84,7 +88,7 @@ export default function Editor() {
     } else if (carregada) {
       idCarregado.current = undefined
       const origem = (location.state as { copiaDe?: Orcamento } | null)?.copiaDe
-      setO(origem ? copiaDe(origem) : orcamentoInicial(config))
+      setO(origem ? copiaDe(origem) : orcamentoInicial(config, tipoNovo))
       setSalvoJson('')
     }
     // a configuração só é usada para montar um orçamento novo
@@ -127,6 +131,17 @@ export default function Editor() {
 
   function alterar<K extends keyof OrcamentoEditavel>(campo: K, valor: OrcamentoEditavel[K]) {
     setO((anterior) => (anterior ? { ...anterior, [campo]: valor } : anterior))
+  }
+  function alterarImpressao(mudanca: Partial<Impressao>) {
+    setO((a) => {
+      if (!a) return a
+      // itens que acompanhavam o número de unidades seguem a nova quantidade
+      const itens =
+        mudanca.unidades !== undefined
+          ? a.itens.map((i) => (i.quantidade === a.impressao.unidades && mudanca.unidades ? { ...i, quantidade: mudanca.unidades } : i))
+          : a.itens
+      return { ...a, itens, impressao: { ...a.impressao, ...mudanca } }
+    })
   }
   function alterarItem(itemId: string, mudanca: Partial<Item>) {
     alterar('itens', atual.itens.map((i) => (i.id === itemId ? { ...i, ...mudanca } : i)))
@@ -233,6 +248,9 @@ export default function Editor() {
   }
 
   const whatsapp = linkWhatsApp(atual.cliente_telefone)
+  const e3d = atual.tipo === 'impressao3d'
+  const imp = atual.impressao
+  const custoFilamento = e3d ? Math.round(imp.filamento_kg * config.filamento_preco_kg * 100) / 100 : 0
 
   return (
     <>
@@ -244,6 +262,12 @@ export default function Editor() {
       />
 
       <main className="mx-auto max-w-3xl space-y-3 p-4 pb-40">
+        <p className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-600">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ${e3d ? 'bg-violet-50 text-violet-800 ring-violet-200' : 'bg-teal-50 text-teal-800 ring-teal-200'}`}>
+            {TIPO_ROTULO[atual.tipo]}
+          </span>
+        </p>
+
         <Secao titulo="Status">
           <Opcoes
             rotulo="Status do orçamento"
@@ -295,59 +319,102 @@ export default function Editor() {
           </div>
         </Secao>
 
-        <Secao titulo="Local e data">
-          <div className="space-y-3">
-            <Opcoes
-              rotulo="Tipo de local"
-              valor={atual.local_tipo}
-              aoMudar={(t) => alterar('local_tipo', t)}
-              opcoes={LOCAL_TIPOS.map((t) => ({ valor: t, rotulo: LOCAL_ROTULO[t] }))}
-            />
-            <Campo rotulo="Endereço">
-              <input
-                className="campo"
-                placeholder="Rua, número, bairro, cidade"
-                value={atual.endereco}
-                onChange={(e) => alterar('endereco', e.target.value)}
-              />
-            </Campo>
-            <Campo rotulo="Bloco / Apto / Complemento">
-              <input
-                className="campo"
-                placeholder="Ex.: Bloco B, apto 42"
-                value={atual.complemento}
-                onChange={(e) => alterar('complemento', e.target.value)}
-              />
-            </Campo>
-            <div className="grid grid-cols-2 gap-3">
-              <Campo rotulo="Data do serviço">
-                <input
-                  className="campo"
-                  type="date"
-                  value={atual.data_servico ?? ''}
-                  onChange={(e) => alterar('data_servico', e.target.value || null)}
+        {e3d ? (
+          <Secao titulo="Impressão 3D">
+            <div className="space-y-3">
+              <Campo rotulo="O que será feito">
+                <textarea
+                  className="campo min-h-20"
+                  placeholder="Ex.: chaveiros personalizados com o logo da loja, 5 cm, PLA preto"
+                  value={imp.descricao}
+                  onChange={(e) => alterarImpressao({ descricao: e.target.value })}
                 />
               </Campo>
-              <Campo rotulo="Hora">
-                <input
-                  className="campo"
-                  type="time"
-                  value={atual.hora_servico ?? ''}
-                  onChange={(e) => alterar('hora_servico', e.target.value || null)}
+              <div className="grid grid-cols-3 gap-3">
+                <Campo rotulo="Unidades">
+                  <CampoNumero valor={imp.unidades} placeholder="1" aoMudar={(v) => alterarImpressao({ unidades: Math.max(0, Math.round(v)) })} />
+                </Campo>
+                <Campo rotulo="Prazo (dias)">
+                  <CampoNumero valor={imp.prazo_dias} placeholder="7" aoMudar={(v) => alterarImpressao({ prazo_dias: Math.max(0, Math.round(v)) })} />
+                </Campo>
+                <Campo rotulo="Filamento">
+                  <CampoNumero valor={imp.filamento_kg} placeholder="0" sufixo="kg" aoMudar={(v) => alterarImpressao({ filamento_kg: Math.max(0, v) })} />
+                </Campo>
+              </div>
+              <div>
+                <span className="rotulo">Tag NFC</span>
+                <Opcoes
+                  rotulo="Possui tag NFC"
+                  valor={imp.nfc ? 'sim' : 'nao'}
+                  aoMudar={(v) => alterarImpressao({ nfc: v === 'sim' })}
+                  opcoes={[
+                    { valor: 'nao', rotulo: 'Sem tag NFC' },
+                    { valor: 'sim', rotulo: 'Com tag NFC' },
+                  ]}
                 />
-              </Campo>
+              </div>
+              {imp.unidades > 1 && imp.filamento_kg > 0 && (
+                <p className="text-sm text-slate-500">
+                  Cerca de {decimal(Math.round((imp.filamento_kg * 1000) / imp.unidades))} g de filamento por unidade.
+                </p>
+              )}
             </div>
-          </div>
-        </Secao>
+          </Secao>
+        ) : (
+          <Secao titulo="Local e data">
+            <div className="space-y-3">
+              <Opcoes
+                rotulo="Tipo de local"
+                valor={atual.local_tipo}
+                aoMudar={(t) => alterar('local_tipo', t)}
+                opcoes={LOCAL_TIPOS.map((t) => ({ valor: t, rotulo: LOCAL_ROTULO[t] }))}
+              />
+              <Campo rotulo="Endereço">
+                <input
+                  className="campo"
+                  placeholder="Rua, número, bairro, cidade"
+                  value={atual.endereco}
+                  onChange={(e) => alterar('endereco', e.target.value)}
+                />
+              </Campo>
+              <Campo rotulo="Bloco / Apto / Complemento">
+                <input
+                  className="campo"
+                  placeholder="Ex.: Bloco B, apto 42"
+                  value={atual.complemento}
+                  onChange={(e) => alterar('complemento', e.target.value)}
+                />
+              </Campo>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo rotulo="Data do serviço">
+                  <input
+                    className="campo"
+                    type="date"
+                    value={atual.data_servico ?? ''}
+                    onChange={(e) => alterar('data_servico', e.target.value || null)}
+                  />
+                </Campo>
+                <Campo rotulo="Hora">
+                  <input
+                    className="campo"
+                    type="time"
+                    value={atual.hora_servico ?? ''}
+                    onChange={(e) => alterar('hora_servico', e.target.value || null)}
+                  />
+                </Campo>
+              </div>
+            </div>
+          </Secao>
+        )}
 
-        <Secao titulo="Serviços">
+        <Secao titulo={e3d ? 'Valores' : 'Serviços'}>
           <ul className="space-y-3">
             {atual.itens.map((item, indice) => (
               <li key={item.id} className="rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200">
                 <div className="flex gap-2">
                   <input
                     className="campo"
-                    placeholder="Descrição do serviço"
+                    placeholder={e3d ? 'Ex.: Impressão das peças' : 'Descrição do serviço'}
                     aria-label={`Descrição do item ${indice + 1}`}
                     value={item.descricao}
                     onChange={(e) => alterarItem(item.id, { descricao: e.target.value })}
@@ -380,7 +447,7 @@ export default function Editor() {
             <button type="button" className="btn-secundario" onClick={() => adicionarItem()}>
               + Adicionar item
             </button>
-            {config.catalogo.length > 0 && (
+            {!e3d && config.catalogo.length > 0 && (
               <select
                 className="campo font-semibold text-slate-700"
                 aria-label="Adicionar serviço do catálogo"
@@ -515,7 +582,7 @@ export default function Editor() {
             <Campo rotulo="Observações (aparecem no PDF)">
               <textarea
                 className="campo min-h-20"
-                placeholder="Ex.: sofá com mancha de café no assento"
+                placeholder={e3d ? 'Ex.: cor do filamento, acabamento, arquivo enviado pelo cliente' : 'Ex.: sofá com mancha de café no assento'}
                 value={atual.observacoes}
                 onChange={(e) => alterar('observacoes', e.target.value)}
               />
@@ -530,6 +597,7 @@ export default function Editor() {
             incluirNoPdf={atual.pdf_fotos}
             aoMudarIncluirNoPdf={(v) => alterar('pdf_fotos', v)}
             avisar={setAviso}
+            tipo={atual.tipo}
           />
         </Secao>
 
@@ -580,10 +648,24 @@ export default function Editor() {
           <button
             type="button"
             className="btn-secundario mt-3 w-full"
-            onClick={() => alterar('custos', [...atual.custos, { id: novoId(), tipo: 'produto', descricao: '', valor: 0 }])}
+            onClick={() => alterar('custos', [...atual.custos, { id: novoId(), tipo: e3d ? 'filamento' : 'produto', descricao: '', valor: 0 }])}
           >
             + Adicionar custo
           </button>
+          {custoFilamento > 0 && (
+            <button
+              type="button"
+              className="btn-secundario mt-2 w-full text-sm"
+              onClick={() => {
+                const descricao = `${decimal(imp.filamento_kg)} kg × ${reais(config.filamento_preco_kg)}`
+                const existente = atual.custos.find((c) => c.tipo === 'filamento')
+                if (existente) alterarCusto(existente.id, { valor: custoFilamento, descricao })
+                else alterar('custos', [...atual.custos, { id: novoId(), tipo: 'filamento', descricao, valor: custoFilamento }])
+              }}
+            >
+              Lançar filamento: {decimal(imp.filamento_kg)} kg × {reais(config.filamento_preco_kg)} = {reais(custoFilamento)}
+            </button>
+          )}
           <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg bg-slate-50 p-2 ring-1 ring-slate-200">
               <dt className="text-xs text-slate-500">Custos</dt>

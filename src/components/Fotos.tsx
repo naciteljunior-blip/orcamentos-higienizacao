@@ -1,12 +1,26 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
 import { novoId } from '../lib/formato'
-import type { Foto, MomentoFoto } from '../types'
+import type { Foto, MomentoFoto, TipoOrcamento } from '../types'
 
-const GRUPOS: { momento: MomentoFoto; titulo: string; dica: string }[] = [
-  { momento: 'antes', titulo: 'Antes', dica: 'Como o estofado estava ao chegar' },
-  { momento: 'depois', titulo: 'Depois', dica: 'Resultado da higienização' },
-]
+type Grupo = { momento: MomentoFoto; titulo: string; dica: string }
+
+const GRUPOS: Record<TipoOrcamento, Grupo[]> = {
+  higienizacao: [
+    { momento: 'antes', titulo: 'Antes', dica: 'Como o estofado estava ao chegar' },
+    { momento: 'depois', titulo: 'Depois', dica: 'Resultado da higienização' },
+  ],
+  impressao3d: [
+    { momento: 'antes', titulo: 'Referência', dica: 'Modelo ou ideia do cliente' },
+    { momento: 'depois', titulo: 'Pronto', dica: 'Peça impressa' },
+  ],
+}
+
+/** Nome do grupo de fotos conforme o tipo de orçamento ("Antes", "Referência", ...). */
+// eslint-disable-next-line react-refresh/only-export-components
+export function tituloFoto(tipo: TipoOrcamento, momento: MomentoFoto): string {
+  return GRUPOS[tipo].find((g) => g.momento === momento)!.titulo
+}
 
 export default function Fotos({
   fotos,
@@ -14,12 +28,14 @@ export default function Fotos({
   incluirNoPdf,
   aoMudarIncluirNoPdf,
   avisar,
+  tipo = 'higienizacao',
 }: {
   fotos: Foto[]
   aoMudar: (atualizar: (fotos: Foto[]) => Foto[]) => void
   incluirNoPdf: boolean
   aoMudarIncluirNoPdf: (valor: boolean) => void
   avisar: (mensagem: string) => void
+  tipo?: TipoOrcamento
 }) {
   const [enviando, setEnviando] = useState<{ momento: MomentoFoto; feitas: number; total: number } | null>(null)
   const [aberta, setAberta] = useState<Foto | null>(null)
@@ -44,7 +60,7 @@ export default function Fotos({
   return (
     <>
       <div className="space-y-4">
-        {GRUPOS.map((g) => {
+        {GRUPOS[tipo].map((g) => {
           const lista = fotos.filter((f) => f.momento === g.momento)
           const ocupado = enviando?.momento === g.momento
           return (
@@ -121,7 +137,9 @@ export default function Fotos({
           />
           <span className="text-sm">
             <span className="font-semibold text-slate-800">Incluir as fotos no PDF</span>
-            <span className="block text-slate-500">Acrescenta uma página com o antes e o depois.</span>
+            <span className="block text-slate-500">
+              {tipo === 'impressao3d' ? 'Acrescenta uma página com as fotos.' : 'Acrescenta uma página com o antes e o depois.'}
+            </span>
           </span>
         </label>
       </div>
@@ -131,11 +149,11 @@ export default function Fotos({
           className="fixed inset-0 z-50 flex flex-col bg-slate-950/95 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-[calc(1rem+env(safe-area-inset-top))]"
           role="dialog"
           aria-modal="true"
-          aria-label={`Foto ${aberta.momento === 'antes' ? 'antes' : 'depois'} do serviço`}
+          aria-label={`Foto: ${tituloFoto(tipo, aberta.momento)}`}
           onClick={() => setAberta(null)}
         >
           <div className="flex items-center justify-between text-white">
-            <span className="font-semibold">{aberta.momento === 'antes' ? 'Antes' : 'Depois'}</span>
+            <span className="font-semibold">{tituloFoto(tipo, aberta.momento)}</span>
             <button type="button" className="rounded-lg px-3 py-2 text-lg" aria-label="Fechar foto" onClick={() => setAberta(null)}>
               ✕
             </button>

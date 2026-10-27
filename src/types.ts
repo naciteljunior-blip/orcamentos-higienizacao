@@ -1,8 +1,21 @@
 export type Status = 'rascunho' | 'enviado' | 'aprovado' | 'em_andamento' | 'concluido' | 'recusado'
 export type LocalTipo = 'apartamento' | 'predio' | 'casa' | 'comercio'
-export type CustoTipo = 'produto' | 'maquina' | 'aluguel' | 'ajudante' | 'transporte' | 'outros'
+export type CustoTipo = 'produto' | 'maquina' | 'aluguel' | 'ajudante' | 'transporte' | 'filamento' | 'outros'
 export type DescontoTipo = 'valor' | 'percentual'
 export type PagamentoForma = 'a_vista' | 'parcelado'
+export type TipoOrcamento = 'higienizacao' | 'impressao3d'
+
+/** Dados próprios de um orçamento de impressão 3D. */
+export interface Impressao {
+  /** o que será feito */
+  descricao: string
+  unidades: number
+  /** prazo de entrega em dias, contados da aprovação */
+  prazo_dias: number
+  /** filamento total do pedido, em kg */
+  filamento_kg: number
+  nfc: boolean
+}
 
 export interface Item {
   id: string
@@ -30,6 +43,7 @@ export interface Foto {
 export interface Orcamento {
   id: string
   numero: number
+  tipo: TipoOrcamento
   status: Status
   cliente_nome: string
   cliente_telefone: string
@@ -53,6 +67,7 @@ export interface Orcamento {
   fotos: Foto[]
   /** inclui as fotos numa página extra do PDF */
   pdf_fotos: boolean
+  impressao: Impressao
   condicoes: string
   observacoes: string
   criado_em: string
@@ -82,6 +97,9 @@ export interface Configuracoes {
   /** imagem em data URL (já reduzida) */
   logo: string
   condicoes_padrao: string
+  condicoes_padrao_3d: string
+  /** custo do filamento por kg, para lançar o custo interno */
+  filamento_preco_kg: number
   validade_padrao: number
   catalogo: ServicoCatalogo[]
 }

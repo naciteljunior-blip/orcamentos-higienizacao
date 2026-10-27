@@ -18,6 +18,7 @@ create table if not exists public.orcamentos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
   numero integer not null,
+  tipo text not null default 'higienizacao' check (tipo in ('higienizacao', 'impressao3d')),
   status text not null default 'rascunho'
     check (status in ('rascunho', 'enviado', 'aprovado', 'em_andamento', 'concluido', 'recusado')),
   cliente_nome text not null default '',
@@ -39,6 +40,7 @@ create table if not exists public.orcamentos (
   pagamento_parcelas integer not null default 1 check (pagamento_parcelas between 1 and 24),
   fotos jsonb not null default '[]'::jsonb,
   pdf_fotos boolean not null default false,
+  impressao jsonb not null default '{}'::jsonb,
   condicoes text not null default '',
   observacoes text not null default '',
   criado_em timestamptz not null default now(),
@@ -53,6 +55,9 @@ alter table public.orcamentos add column if not exists pagamento_parcelas intege
   check (pagamento_parcelas between 1 and 24);
 alter table public.orcamentos add column if not exists fotos jsonb not null default '[]'::jsonb;
 alter table public.orcamentos add column if not exists pdf_fotos boolean not null default false;
+alter table public.orcamentos add column if not exists tipo text not null default 'higienizacao'
+  check (tipo in ('higienizacao', 'impressao3d'));
+alter table public.orcamentos add column if not exists impressao jsonb not null default '{}'::jsonb;
 
 create index if not exists orcamentos_user_data_idx on public.orcamentos (user_id, data_servico);
 
@@ -135,13 +140,13 @@ begin
   delete from orcamentos where user_id = uid;
 
   insert into orcamentos (
-    id, user_id, numero, status, cliente_nome, cliente_telefone, cliente_email,
+    id, user_id, numero, tipo, status, cliente_nome, cliente_telefone, cliente_email,
     local_tipo, endereco, complemento, data_servico, hora_servico, data_emissao,
     validade_dias, itens, desconto_tipo, desconto, custos, pagamento_forma, pagamento_parcelas,
-    fotos, pdf_fotos, condicoes, observacoes, criado_em, atualizado_em
+    fotos, pdf_fotos, impressao, condicoes, observacoes, criado_em, atualizado_em
   )
   select
-    coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.status, 'rascunho'),
+    coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.tipo, 'higienizacao'), coalesce(o.status, 'rascunho'),
     coalesce(o.cliente_nome, ''), coalesce(o.cliente_telefone, ''), coalesce(o.cliente_email, ''),
     coalesce(o.local_tipo, 'apartamento'), coalesce(o.endereco, ''), coalesce(o.complemento, ''),
     o.data_servico, o.hora_servico, coalesce(o.data_emissao, current_date),
@@ -149,6 +154,7 @@ begin
     coalesce(o.desconto_tipo, 'valor'), coalesce(o.desconto, 0), coalesce(o.custos, '[]'::jsonb),
     coalesce(o.pagamento_forma, 'a_vista'), coalesce(o.pagamento_parcelas, 1),
     coalesce(o.fotos, '[]'::jsonb), coalesce(o.pdf_fotos, false),
+    coalesce(o.impressao, '{}'::jsonb),
     coalesce(o.condicoes, ''), coalesce(o.observacoes, ''),
     coalesce(o.criado_em, now()), coalesce(o.atualizado_em, now())
   from jsonb_populate_recordset(null::orcamentos, coalesce(backup -> 'orcamentos', '[]'::jsonb)) as o;

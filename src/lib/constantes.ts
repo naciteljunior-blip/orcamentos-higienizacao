@@ -1,4 +1,13 @@
-import type { Configuracoes, CustoTipo, LocalTipo, Status } from '../types'
+import type { Configuracoes, CustoTipo, Impressao, LocalTipo, Status, TipoOrcamento } from '../types'
+
+export const TIPOS: TipoOrcamento[] = ['higienizacao', 'impressao3d']
+
+export const TIPO_ROTULO: Record<TipoOrcamento, string> = {
+  higienizacao: 'Higienização',
+  impressao3d: 'Impressão 3D',
+}
+
+export const IMPRESSAO_PADRAO: Impressao = { descricao: '', unidades: 1, prazo_dias: 7, filamento_kg: 0, nfc: false }
 
 export const STATUS: Status[] = ['rascunho', 'enviado', 'aprovado', 'em_andamento', 'concluido', 'recusado']
 
@@ -32,7 +41,7 @@ export const LOCAL_ROTULO: Record<LocalTipo, string> = {
   comercio: 'Comércio',
 }
 
-export const CUSTO_TIPOS: CustoTipo[] = ['produto', 'maquina', 'aluguel', 'ajudante', 'transporte', 'outros']
+export const CUSTO_TIPOS: CustoTipo[] = ['produto', 'maquina', 'aluguel', 'ajudante', 'transporte', 'filamento', 'outros']
 
 export const CUSTO_ROTULO: Record<CustoTipo, string> = {
   produto: 'Produto',
@@ -40,6 +49,7 @@ export const CUSTO_ROTULO: Record<CustoTipo, string> = {
   aluguel: 'Aluguel de equipamento',
   ajudante: 'Ajudante',
   transporte: 'Transporte',
+  filamento: 'Filamento',
   outros: 'Outros',
 }
 
@@ -63,6 +73,12 @@ export const CONFIG_PADRAO: Configuracoes = {
     'O serviço é agendado após a aprovação do orçamento.\n' +
     'O tempo de secagem varia de 6 a 12 horas, conforme o tecido e a ventilação do local.\n' +
     'Manchas antigas podem não sair por completo, dependendo da origem e do tecido.',
+  condicoes_padrao_3d:
+    'Pagamento via PIX, dinheiro ou cartão.\n' +
+    'A produção começa após a aprovação do orçamento.\n' +
+    'Pequenas marcas de camada são normais na impressão 3D.\n' +
+    'Alterações no modelo depois da aprovação podem mudar o valor e o prazo.',
+  filamento_preco_kg: 0,
   validade_padrao: 30,
   catalogo: [
     { id: 'sofa-2', descricao: 'Higienização de sofá 2 lugares', valor: 0 },

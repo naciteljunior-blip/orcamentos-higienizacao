@@ -4,15 +4,16 @@ import GraficoMeses from '../components/GraficoMeses'
 import { Cabecalho, Carregando, Erro, Secao, StatusBadge } from '../components/ui'
 import { api } from '../lib/api'
 import { mesAnterior, resumoDoMes, ultimosMeses } from '../lib/calc'
-import { CUSTO_ROTULO, CUSTO_TIPOS, MESES, STATUS } from '../lib/constantes'
+import { CUSTO_ROTULO, CUSTO_TIPOS, MESES, STATUS, TIPO_ROTULO, TIPOS } from '../lib/constantes'
 import { porcentagem, reais } from '../lib/formato'
-import type { Orcamento } from '../types'
+import type { Orcamento, TipoOrcamento } from '../types'
 
 export default function Resumo() {
   const hoje = new Date()
   const [periodo, setPeriodo] = useState({ ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 })
   const [orcamentos, setOrcamentos] = useState<Orcamento[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  const [tipo, setTipo] = useState<TipoOrcamento | null>(null)
 
   const carregar = useCallback(async () => {
     setErro(null)
@@ -27,8 +28,9 @@ export default function Resumo() {
     void carregar()
   }, [carregar])
 
-  const resumo = useMemo(() => (orcamentos ? resumoDoMes(orcamentos, periodo.ano, periodo.mes) : null), [orcamentos, periodo])
-  const grafico = useMemo(() => (orcamentos ? ultimosMeses(orcamentos, periodo.ano, periodo.mes, 6) : []), [orcamentos, periodo])
+  const doTipo = useMemo(() => (orcamentos && tipo ? orcamentos.filter((o) => o.tipo === tipo) : orcamentos), [orcamentos, tipo])
+  const resumo = useMemo(() => (doTipo ? resumoDoMes(doTipo, periodo.ano, periodo.mes) : null), [doTipo, periodo])
+  const grafico = useMemo(() => (doTipo ? ultimosMeses(doTipo, periodo.ano, periodo.mes, 6) : []), [doTipo, periodo])
 
   const mudarMes = (n: number) => setPeriodo((p) => mesAnterior(p.ano, p.mes, -n))
   const maiorCusto = resumo ? Math.max(...Object.values(resumo.custosPorTipo), 0) : 0
@@ -47,6 +49,22 @@ export default function Resumo() {
           <button type="button" className="rounded-lg px-4 py-2 text-xl text-slate-600 hover:bg-slate-100" aria-label="Próximo mês" onClick={() => mudarMes(1)}>
             ›
           </button>
+        </div>
+
+        <div className="flex gap-2" role="group" aria-label="Filtrar por tipo">
+          {[null, ...TIPOS].map((t) => (
+            <button
+              key={t ?? 'todos'}
+              type="button"
+              aria-pressed={tipo === t}
+              onClick={() => setTipo(t)}
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ${
+                tipo === t ? 'bg-brand-700 text-white ring-brand-700' : 'bg-white text-slate-700 ring-slate-300'
+              }`}
+            >
+              {t ? TIPO_ROTULO[t] : 'Tudo'}
+            </button>
+          ))}
         </div>
 
         {erro && <Erro mensagem={erro} tentarDeNovo={carregar} />}
