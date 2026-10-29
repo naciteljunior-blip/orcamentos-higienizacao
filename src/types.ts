@@ -75,6 +75,7 @@ export interface Orcamento {
   cliente_telefone: string
   cliente_email: string
   local_tipo: LocalTipo
+  cep: string
   endereco: string
   complemento: string
   /** AAAA-MM-DD */

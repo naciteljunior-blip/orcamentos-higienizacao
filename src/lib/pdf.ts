@@ -159,6 +159,7 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
       ['Tipo de local', LOCAL_ROTULO[o.local_tipo]],
       ['Data e hora', dataHoraBR(o.data_servico, o.hora_servico) || 'A combinar'],
       ['Endereço', o.endereco],
+      ['CEP', o.cep],
       ['Bloco / Apto / Complemento', o.complemento],
     ])
   }

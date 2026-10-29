@@ -26,6 +26,7 @@ create table if not exists public.orcamentos (
   cliente_email text not null default '',
   local_tipo text not null default 'apartamento'
     check (local_tipo in ('apartamento', 'predio', 'casa', 'comercio')),
+  cep text not null default '',
   endereco text not null default '',
   complemento text not null default '',
   data_servico date,
@@ -59,6 +60,7 @@ alter table public.orcamentos add column if not exists pdf_fotos boolean not nul
 alter table public.orcamentos add column if not exists tipo text not null default 'higienizacao';
 alter table public.orcamentos add column if not exists impressao jsonb not null default '{}'::jsonb;
 alter table public.orcamentos add column if not exists pos_obra jsonb not null default '{}'::jsonb;
+alter table public.orcamentos add column if not exists cep text not null default '';
 -- tipos de orçamento aceitos (recriada a cada versão para incluir os tipos novos)
 alter table public.orcamentos drop constraint if exists orcamentos_tipo_check;
 alter table public.orcamentos add constraint orcamentos_tipo_check
@@ -146,14 +148,14 @@ begin
 
   insert into orcamentos (
     id, user_id, numero, tipo, status, cliente_nome, cliente_telefone, cliente_email,
-    local_tipo, endereco, complemento, data_servico, hora_servico, data_emissao,
+    local_tipo, cep, endereco, complemento, data_servico, hora_servico, data_emissao,
     validade_dias, itens, desconto_tipo, desconto, custos, pagamento_forma, pagamento_parcelas,
     fotos, pdf_fotos, impressao, pos_obra, condicoes, observacoes, criado_em, atualizado_em
   )
   select
     coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.tipo, 'higienizacao'), coalesce(o.status, 'rascunho'),
     coalesce(o.cliente_nome, ''), coalesce(o.cliente_telefone, ''), coalesce(o.cliente_email, ''),
-    coalesce(o.local_tipo, 'apartamento'), coalesce(o.endereco, ''), coalesce(o.complemento, ''),
+    coalesce(o.local_tipo, 'apartamento'), coalesce(o.cep, ''), coalesce(o.endereco, ''), coalesce(o.complemento, ''),
     o.data_servico, o.hora_servico, coalesce(o.data_emissao, current_date),
     coalesce(o.validade_dias, 30), coalesce(o.itens, '[]'::jsonb),
     coalesce(o.desconto_tipo, 'valor'), coalesce(o.desconto, 0), coalesce(o.custos, '[]'::jsonb),

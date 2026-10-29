@@ -44,7 +44,7 @@ export default function Lista() {
       if (filtro && o.status !== filtro) return false
       if (!termo) return true
       const alvo = semAcento(
-        [numeroFormatado(o.numero), o.cliente_nome, o.cliente_telefone, o.endereco, o.complemento, o.impressao.descricao].join(' '),
+        [numeroFormatado(o.numero), o.cliente_nome, o.cliente_telefone, o.cep, o.endereco, o.complemento, o.impressao.descricao].join(' '),
       )
       return alvo.includes(termo)
     })

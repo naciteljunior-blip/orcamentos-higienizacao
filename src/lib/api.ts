@@ -53,6 +53,7 @@ function normalizar(linha: Orcamento): Orcamento {
   return {
     ...linha,
     tipo: linha.tipo ?? 'higienizacao',
+    cep: linha.cep ?? '',
     impressao: { ...IMPRESSAO_PADRAO, ...(linha.impressao ?? {}) },
     pos_obra: { ...POS_OBRA_PADRAO, ...(linha.pos_obra ?? {}) },
     hora_servico: linha.hora_servico ? linha.hora_servico.slice(0, 5) : null,

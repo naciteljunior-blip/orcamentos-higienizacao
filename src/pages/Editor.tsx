@@ -6,6 +6,7 @@ import { useConfirmar } from '../components/Confirmacao'
 import Fotos from '../components/Fotos'
 import PosObraCampos from '../components/PosObraCampos'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
+import { buscarCep, formatarCep, montarEndereco, soDigitos } from '../lib/cep'
 import { hojeISO, itensComArea, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
 import { useConfig } from '../lib/configContexto'
 import {
@@ -32,6 +33,7 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
     cliente_telefone: '',
     cliente_email: '',
     local_tipo: 'apartamento',
+    cep: '',
     endereco: '',
     complemento: '',
     data_servico: null,
@@ -92,6 +94,10 @@ export default function Editor() {
   const [erroCarga, setErroCarga] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<null | 'salvando' | 'pdf'>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [buscandoCep, setBuscandoCep] = useState(false)
+  const ultimoCep = useRef('')
+  // último endereço preenchido pela busca: só ele (ou um campo vazio) é trocado pela busca automática
+  const enderecoDoCep = useRef('')
   const idCarregado = useRef<string | undefined>(undefined)
 
   useEffect(() => {
@@ -200,6 +206,37 @@ export default function Editor() {
     const vazia = atual.itens.find((i) => !i.descricao.trim() && !i.valor_unitario)
     if (vazia && descricao) return alterarItem(vazia.id, { descricao, valor_unitario: valor })
     alterar('itens', [...atual.itens, { id: novoId(), descricao, quantidade: 1, valor_unitario: valor }])
+  }
+
+  async function procurarCep(cep: string, pedido: 'automatico' | 'botao') {
+    const digitos = soDigitos(cep)
+    if (buscandoCep) return
+    ultimoCep.current = digitos
+    setBuscandoCep(true)
+    try {
+      const achado = await buscarCep(digitos)
+      if (ultimoCep.current !== digitos) return // o CEP mudou enquanto buscava
+      const atualEndereco = (document.getElementById('endereco') as HTMLInputElement | null)?.value.trim() ?? ''
+      if (pedido === 'automatico' && atualEndereco && atualEndereco !== enderecoDoCep.current) {
+        setAviso(`CEP de ${montarEndereco(achado)}. Toque em "Buscar CEP" para trocar o endereço.`)
+        return
+      }
+      const endereco = montarEndereco(achado)
+      enderecoDoCep.current = endereco
+      alterar('endereco', endereco)
+      // deixa o cursor logo depois do nome da rua, para digitar o número
+      requestAnimationFrame(() => {
+        const campo = document.getElementById('endereco') as HTMLInputElement | null
+        if (!campo) return
+        campo.focus()
+        campo.setSelectionRange(achado.logradouro.length, achado.logradouro.length)
+      })
+      setAviso(achado.logradouro ? 'Endereço encontrado. Digite o número depois do nome da rua.' : 'Cidade encontrada. Complete a rua e o número.')
+    } catch (e) {
+      setAviso((e as Error).message)
+    } finally {
+      setBuscandoCep(false)
+    }
   }
 
   async function salvar(comAviso = true): Promise<Orcamento | null> {
@@ -416,8 +453,35 @@ export default function Editor() {
                 aoMudar={(t) => alterar('local_tipo', t)}
                 opcoes={LOCAL_TIPOS.map((t) => ({ valor: t, rotulo: LOCAL_ROTULO[t] }))}
               />
+              <Campo rotulo="CEP">
+                <div className="flex gap-2">
+                  <input
+                    className="campo max-w-40"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="00000-000"
+                    value={atual.cep}
+                    onChange={(e) => {
+                      const cep = formatarCep(e.target.value)
+                      alterar('cep', cep)
+                      // busca sozinho ao completar os 8 números
+                      if (soDigitos(cep).length < 8) ultimoCep.current = ''
+                      else if (soDigitos(cep) !== ultimoCep.current) void procurarCep(cep, 'automatico')
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secundario shrink-0"
+                    disabled={buscandoCep || soDigitos(atual.cep).length !== 8}
+                    onClick={() => void procurarCep(atual.cep, 'botao')}
+                  >
+                    {buscandoCep ? 'Buscando…' : 'Buscar CEP'}
+                  </button>
+                </div>
+              </Campo>
               <Campo rotulo="Endereço">
                 <input
+                  id="endereco"
                   className="campo"
                   placeholder="Rua, número, bairro, cidade"
                   value={atual.endereco}
