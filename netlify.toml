@@ -1,0 +1,8 @@
+# Publicação no Netlify (ligando o repositório do GitHub). Para publicar sem ligar o repositório,
+# arraste a pasta dist (gerada por `npm run build`) em https://app.netlify.com/drop
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"

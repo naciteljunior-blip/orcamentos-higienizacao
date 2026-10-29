@@ -6,6 +6,7 @@ import { Carregando } from './components/ui'
 import { api } from './lib/api'
 import { ProvedorConfig } from './lib/configContexto'
 import { MODO_ARTIFACT } from './lib/plataforma'
+import Agenda from './pages/Agenda'
 import Configuracoes from './pages/Configuracoes'
 import Editor from './pages/Editor'
 import Lista from './pages/Lista'
@@ -36,6 +37,7 @@ export default function App() {
             <Route index element={<Lista />} />
             <Route path="orcamento/novo" element={<Editor />} />
             <Route path="orcamento/:id" element={<Editor />} />
+            <Route path="agenda" element={<Agenda />} />
             <Route path="resumo" element={<Resumo />} />
             <Route path="configuracoes" element={<Configuracoes usuario={usuario} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

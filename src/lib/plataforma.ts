@@ -26,7 +26,8 @@ function baixarPorLink(conteudo: Blob, nome: string) {
   const url = URL.createObjectURL(conteudo)
   const link = document.createElement('a')
   link.href = url
-  link.download = nome
+  // sem acentos: alguns navegadores trocam por "download" o nome com acento
+  link.download = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   document.body.appendChild(link)
   link.click()
   link.remove()

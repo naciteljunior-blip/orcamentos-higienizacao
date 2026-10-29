@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Secao } from '../components/ui'
 import { useConfirmar } from '../components/Confirmacao'
 import { api } from '../lib/api'
-import { baixarBackup, lerBackup, montarBackup } from '../lib/backup'
+import { baixarBackup, embutirFotos, lerBackup, montarBackup } from '../lib/backup'
 import { useConfig } from '../lib/configContexto'
 import { novoId, reais } from '../lib/formato'
 import type { Configuracoes as Config } from '../types'
@@ -72,7 +72,8 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
 
   async function exportar() {
     try {
-      if (await baixarBackup(montarBackup(config, await api.listar()))) setAviso('Backup salvo')
+      const orcamentos = await embutirFotos(await api.listar(), (ref) => api.urlFoto(ref))
+      if (await baixarBackup(montarBackup(config, orcamentos))) setAviso('Backup salvo')
     } catch (e) {
       setAviso(`Erro ao gerar backup: ${(e as Error).message}`)
     }

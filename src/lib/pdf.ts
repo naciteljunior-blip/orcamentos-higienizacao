@@ -1,10 +1,13 @@
 import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
 import type { Configuracoes, Orcamento } from '../types'
-import { LOCAL_ROTULO, NIVEL_ROTULO } from './constantes'
-import { numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto, valorParcela } from './calc'
-import { dataBR, dataHoraBR, decimal, reais } from './formato'
+import { LOCAL_ROTULO, NIVEL_ROTULO, TIPO_ROTULO } from './constantes'
+import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto } from './calc'
+import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
+import { textoPagamento } from './pagamento'
+
+export { textoPagamento }
 
 // Este módulo só usa os dados do cliente, itens, desconto e condições.
 // Os custos internos (orcamento.custos) NUNCA entram no PDF.
@@ -21,13 +24,6 @@ function formatoImagem(dataUrl: string): 'PNG' | 'JPEG' | null {
   if (dataUrl.startsWith('data:image/png')) return 'PNG'
   if (dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')) return 'JPEG'
   return null
-}
-
-export function textoPagamento(o: Pick<Orcamento, 'tipo' | 'pagamento_forma' | 'pagamento_parcelas'>, valorTotal: number): string {
-  if (o.pagamento_forma === 'parcelado' && o.pagamento_parcelas > 1) {
-    return `Parcelado em ${o.pagamento_parcelas}x de ${reais(valorParcela(valorTotal, o.pagamento_parcelas))}`
-  }
-  return o.tipo === 'impressao3d' ? `À vista: ${reais(valorTotal)}` : `À vista, no ato do serviço: ${reais(valorTotal)}`
 }
 
 export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (ref: string) => string): Promise<Blob> {
@@ -341,6 +337,111 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
     doc.setFontSize(7.5)
     doc.setTextColor(...COR_SUAVE)
     doc.text(`${numeroFormatado(o.numero)}  |  página ${p} de ${paginas}`, LARGURA / 2, ALTURA - 8, { align: 'center' })
+  }
+
+  return doc.output('blob')
+}
+
+const MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+/** Recibo de pagamento (uma página): valor em número e por extenso, serviço e assinatura de quem recebeu. */
+export async function gerarRecibo(o: Orcamento, config: Configuracoes, dataRecibo = hojeISO()): Promise<Blob> {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const direita = LARGURA - MARGEM
+  let y = MARGEM
+
+  // ---- Cabeçalho ----
+  let xTexto = MARGEM
+  const formato = config.logo ? formatoImagem(config.logo) : null
+  if (config.logo && formato) {
+    try {
+      const props = doc.getImageProperties(config.logo)
+      const larguraLogo = Math.min(34, (props.width / props.height) * 18)
+      doc.addImage(config.logo, formato, MARGEM, y, larguraLogo, (props.height / props.width) * larguraLogo)
+      xTexto = MARGEM + larguraLogo + 5
+    } catch {
+      // logo inválido: segue sem ele
+    }
+  }
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.setTextColor(...COR_TEXTO)
+  doc.text(config.empresa_nome || 'Recibo', xTexto, y + 5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+  doc.setTextColor(...COR_SUAVE)
+  const linhasEmpresa = [
+    config.documento && `CNPJ/CPF: ${config.documento}`,
+    [config.telefone, config.email].filter(Boolean).join('  |  '),
+    config.endereco,
+  ].filter(Boolean) as string[]
+  linhasEmpresa.forEach((linha, i) => doc.text(linha, xTexto, y + 10 + i * 4))
+  y += Math.max(24, 12 + linhasEmpresa.length * 4)
+
+  // ---- Título e valor ----
+  const valor = total(o)
+  doc.setFillColor(240, 253, 250)
+  doc.setDrawColor(...COR_DESTAQUE)
+  doc.roundedRect(MARGEM, y, UTIL, 18, 2, 2, 'FD')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.setTextColor(...COR_DESTAQUE)
+  doc.text('RECIBO', MARGEM + 5, y + 11.5)
+  doc.setFontSize(16)
+  doc.text(reais(valor), direita - 5, y + 11.5, { align: 'right' })
+  y += 28
+
+  // ---- Texto do recibo ----
+  const servico =
+    o.tipo === 'impressao3d'
+      ? `impressão 3D${o.impressao.descricao.trim() ? ` (${o.impressao.descricao.trim()})` : ''}`
+      : `${TIPO_ROTULO[o.tipo].toLowerCase()}${o.endereco ? ` no endereço ${o.endereco}${o.complemento ? `, ${o.complemento}` : ''}` : ''}`
+  const quando = o.tipo !== 'impressao3d' && o.data_servico ? `, realizado em ${dataBR(o.data_servico)}` : ''
+  const texto =
+    `Recebi de ${o.cliente_nome || '________________________'} a importância de ${reais(valor)} ` +
+    `(${reaisPorExtenso(valor)}), referente ao serviço de ${servico}${quando}, ` +
+    `conforme o orçamento ${numeroFormatado(o.numero)}.`
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11.5)
+  doc.setTextColor(...COR_TEXTO)
+  const linhas = doc.splitTextToSize(texto, UTIL) as string[]
+  doc.text(linhas, MARGEM, y, { lineHeightFactor: 1.6 })
+  y += linhas.length * 11.5 * 0.353 * 1.6 + 6
+
+  // ---- Itens ----
+  autoTable(doc, {
+    startY: y,
+    margin: { left: MARGEM, right: MARGEM },
+    head: [['Descrição', 'Qtd.', 'Total']],
+    body: o.itens.map((item) => [item.descricao, decimal(item.quantidade), reais(totalItem(item))]),
+    foot: valorDesconto(o) > 0 ? [['Desconto', '', `- ${reais(valorDesconto(o))}`]] : undefined,
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 9.5, textColor: COR_TEXTO, cellPadding: 1.6 },
+    headStyles: { fontStyle: 'bold', textColor: COR_SUAVE },
+    footStyles: { fontStyle: 'normal', textColor: COR_SUAVE },
+    columnStyles: { 1: { halign: 'center', cellWidth: 16 }, 2: { halign: 'right', cellWidth: 32 } },
+  })
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
+
+  doc.setFontSize(10)
+  doc.text(`Forma de pagamento: ${o.pagamento_forma === 'parcelado' && o.pagamento_parcelas > 1 ? `parcelado em ${o.pagamento_parcelas}x` : 'à vista'}`, MARGEM, y)
+  y += 6
+  doc.text('Para clareza, firmo o presente recibo, dando plena quitação do valor acima.', MARGEM, y)
+  y += 14
+
+  // ---- Local, data e assinatura ----
+  const [ano, mes, dia] = dataRecibo.split('-').map(Number)
+  doc.text(`${dia} de ${MESES_EXTENSO[mes - 1]} de ${ano}.`, direita, y, { align: 'right' })
+  y += 26
+  doc.setDrawColor(...COR_TEXTO)
+  doc.setLineWidth(0.3)
+  doc.line(LARGURA / 2 - 45, y, LARGURA / 2 + 45, y)
+  doc.setFontSize(9.5)
+  doc.text(config.empresa_nome || 'Assinatura', LARGURA / 2, y + 5, { align: 'center' })
+  if (config.documento) {
+    doc.setFontSize(8.5)
+    doc.setTextColor(...COR_SUAVE)
+    doc.text(`CNPJ/CPF: ${config.documento}`, LARGURA / 2, y + 9.5, { align: 'center' })
   }
 
   return doc.output('blob')

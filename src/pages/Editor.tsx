@@ -23,6 +23,7 @@ import {
   TIPOS,
 } from '../lib/constantes'
 import { dataBR, decimal, linkWhatsApp, novoId, porcentagem, reais } from '../lib/formato'
+import { linkGoogleAgenda, mensagemAgradecimento, mensagemCobranca, mensagemConfirmacao, mensagemOrcamento } from '../lib/mensagens'
 import type { Configuracoes, Custo, Impressao, Item, Orcamento, OrcamentoEditavel, OrcamentoNovo, PosObra, TipoOrcamento } from '../types'
 
 function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): OrcamentoNovo {
@@ -92,7 +93,8 @@ export default function Editor() {
   const [o, setO] = useState<OrcamentoEditavel | null>(null)
   const [salvoJson, setSalvoJson] = useState('')
   const [erroCarga, setErroCarga] = useState<string | null>(null)
-  const [ocupado, setOcupado] = useState<null | 'salvando' | 'pdf'>(null)
+  const [ocupado, setOcupado] = useState<null | 'salvando' | 'pdf' | 'recibo'>(null)
+  const [clientes, setClientes] = useState<Map<string, Orcamento>>(new Map())
   const [aviso, setAviso] = useState<string | null>(null)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const ultimoCep = useRef('')
@@ -122,6 +124,21 @@ export default function Editor() {
     // a configuração só é usada para montar um orçamento novo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, carregada, location.key])
+
+  // clientes já atendidos (o orçamento mais recente de cada nome), para completar os dados
+  useEffect(() => {
+    api
+      .listar()
+      .then((lista) => {
+        const mapa = new Map<string, Orcamento>()
+        for (const x of lista) {
+          const chave = x.cliente_nome.trim().toLowerCase()
+          if (chave && !mapa.has(chave)) mapa.set(chave, x)
+        }
+        setClientes(mapa)
+      })
+      .catch(() => {})
+  }, [])
 
   const alterado = o !== null && JSON.stringify(o) !== salvoJson
 
@@ -159,6 +176,26 @@ export default function Editor() {
 
   function alterar<K extends keyof OrcamentoEditavel>(campo: K, valor: OrcamentoEditavel[K]) {
     setO((anterior) => (anterior ? { ...anterior, [campo]: valor } : anterior))
+  }
+  /** Traz telefone, e-mail e endereço do último orçamento do mesmo cliente. */
+  function usarDadosDe(anterior: Orcamento) {
+    setO(
+      (a) =>
+        a && {
+          ...a,
+          cliente_nome: anterior.cliente_nome,
+          cliente_telefone: anterior.cliente_telefone,
+          cliente_email: anterior.cliente_email,
+          ...(a.tipo !== 'impressao3d' && {
+            local_tipo: anterior.local_tipo,
+            cep: anterior.cep,
+            endereco: anterior.endereco,
+            complemento: anterior.complemento,
+          }),
+        },
+    )
+    enderecoDoCep.current = anterior.endereco
+    setAviso(`Dados de ${anterior.cliente_nome} preenchidos.`)
   }
   function alterarImpressao(mudanca: Partial<Impressao>) {
     setO((a) => {
@@ -307,6 +344,21 @@ export default function Editor() {
     }
   }
 
+  async function gerarRecibo() {
+    const salvo = await salvar(false)
+    if (!salvo) return
+    setOcupado('recibo')
+    try {
+      const { gerarRecibo } = await import('../lib/pdf')
+      const blob = await gerarRecibo(salvo, config)
+      if (await salvarArquivo(blob, `Recibo ${nomeArquivo(salvo)}.pdf`)) setAviso('Recibo gerado')
+    } catch (e) {
+      setAviso(`Erro ao gerar recibo: ${(e as Error).message}`)
+    } finally {
+      setOcupado(null)
+    }
+  }
+
   async function excluir() {
     if (!atual.id) return navigate('/')
     const ok = await confirmar(`Excluir ${numeroFormatado(atual.numero)} de ${atual.cliente_nome}?${atual.fotos.length ? ' As fotos também serão apagadas.' : ''} Isso não pode ser desfeito.`, {
@@ -331,6 +383,23 @@ export default function Editor() {
   }
 
   const whatsapp = linkWhatsApp(atual.cliente_telefone)
+  const conhecido = clientes.get(atual.cliente_nome.trim().toLowerCase())
+  // só oferece num orçamento novo em que telefone e endereço ainda estão em branco
+  const clienteConhecido = conhecido && !atual.id && !atual.cliente_telefone && !atual.endereco ? conhecido : null
+  const salvoAtual = atual.id ? (atual as Orcamento) : null
+  const mensagens = salvoAtual
+    ? [
+        { rotulo: 'Resumo do orçamento', texto: mensagemOrcamento(salvoAtual, config), mostrar: true },
+        { rotulo: 'Cobrar resposta', texto: mensagemCobranca(salvoAtual, config), mostrar: atual.status === 'enviado' },
+        {
+          rotulo: 'Confirmar agendamento',
+          texto: mensagemConfirmacao(salvoAtual, config),
+          mostrar: atual.tipo !== 'impressao3d' && !!atual.data_servico && ['enviado', 'aprovado', 'em_andamento'].includes(atual.status),
+        },
+        { rotulo: 'Agradecer e pedir indicação', texto: mensagemAgradecimento(salvoAtual, config), mostrar: atual.status === 'concluido' },
+      ].filter((m) => m.mostrar)
+    : []
+  const agenda = salvoAtual && atual.tipo !== 'impressao3d' ? linkGoogleAgenda(salvoAtual, config) : null
   const e3d = atual.tipo === 'impressao3d'
   const ePos = atual.tipo === 'pos_obra'
   const imp = atual.impressao
@@ -368,9 +437,22 @@ export default function Editor() {
                 id="cliente-nome"
                 className="campo"
                 autoComplete="off"
+                list="clientes-anteriores"
                 value={atual.cliente_nome}
                 onChange={(e) => alterar('cliente_nome', e.target.value)}
               />
+              <datalist id="clientes-anteriores">
+                {[...clientes.values()].map((c) => (
+                  <option key={c.id} value={c.cliente_nome}>
+                    {c.cliente_telefone}
+                  </option>
+                ))}
+              </datalist>
+              {clienteConhecido && (
+                <button type="button" className="btn-secundario mt-2 w-full text-sm" onClick={() => usarDadosDe(clienteConhecido)}>
+                  Cliente já atendido: usar telefone e endereço do {numeroFormatado(clienteConhecido.numero)}
+                </button>
+              )}
             </Campo>
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo rotulo="Telefone / WhatsApp">
@@ -818,6 +900,35 @@ export default function Editor() {
             </div>
           </dl>
         </Secao>
+
+        {salvoAtual && (
+          <Secao titulo="Falar com o cliente">
+            {alterado && <p className="mb-2 text-sm text-amber-800">Salve antes: as mensagens usam o que já está salvo.</p>}
+            {whatsapp ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {mensagens.map((m) => (
+                  <a key={m.rotulo} className="btn-secundario" href={linkWhatsApp(atual.cliente_telefone, m.texto) ?? undefined} target="_blank" rel="noreferrer">
+                    WhatsApp: {m.rotulo}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">Coloque o telefone do cliente para mandar mensagens prontas pelo WhatsApp.</p>
+            )}
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {agenda && (
+                <a className="btn-secundario" href={agenda} target="_blank" rel="noreferrer">
+                  Pôr no Google Agenda
+                </a>
+              )}
+              {['aprovado', 'em_andamento', 'concluido'].includes(atual.status) && (
+                <button type="button" className="btn-secundario" onClick={() => void gerarRecibo()} disabled={ocupado !== null}>
+                  {ocupado === 'recibo' ? 'Gerando recibo…' : 'Recibo de pagamento (PDF)'}
+                </button>
+              )}
+            </div>
+          </Secao>
+        )}
 
         <section className="grid gap-2 sm:grid-cols-3">
           <button type="button" className="btn-secundario" onClick={() => void gerarPdf('baixar')} disabled={ocupado !== null}>

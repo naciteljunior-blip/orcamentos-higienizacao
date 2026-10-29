@@ -8,7 +8,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../supabase.config'
 import { MODO_ARTIFACT, usarRecurso } from './plataforma'
 
 export interface Api {
-  /** 'demo' quando o Supabase não está configurado: tudo fica só neste navegador.
+  /** 'demo' quando o Supabase não está configurado: tudo fica salvo só neste aparelho.
    *  'artifact' na página publicada no claude.ai, com o banco embutido dela. */
   modo: 'supabase' | 'demo' | 'artifact'
   /** E-mail do usuário logado, ou null. */
@@ -142,28 +142,90 @@ interface DadosDemo {
   configuracoes: Configuracoes
 }
 
+// Site sem Supabase: os dados ficam no IndexedDB do aparelho (cabe bem mais que o localStorage,
+// o que importa por causa das fotos). Versões anteriores gravavam no localStorage: lidos uma vez e migrados.
+const BANCO_LOCAL = 'orcamentos'
+const TABELA_LOCAL = 'dados'
+
+function abrirBancoLocal(): Promise<IDBDatabase> {
+  return new Promise((ok, falha) => {
+    const pedido = indexedDB.open(BANCO_LOCAL, 1)
+    pedido.onupgradeneeded = () => pedido.result.createObjectStore(TABELA_LOCAL)
+    pedido.onsuccess = () => ok(pedido.result)
+    pedido.onerror = () => falha(pedido.error)
+  })
+}
+
+async function lerLocal(): Promise<DadosDemo | null> {
+  const banco = await abrirBancoLocal()
+  return new Promise((ok, falha) => {
+    const pedido = banco.transaction(TABELA_LOCAL).objectStore(TABELA_LOCAL).get('tudo')
+    pedido.onsuccess = () => ok((pedido.result as DadosDemo | undefined) ?? null)
+    pedido.onerror = () => falha(pedido.error)
+  })
+}
+
+async function gravarLocal(dados: DadosDemo): Promise<void> {
+  const banco = await abrirBancoLocal()
+  return new Promise((ok, falha) => {
+    const transacao = banco.transaction(TABELA_LOCAL, 'readwrite')
+    transacao.objectStore(TABELA_LOCAL).put(dados, 'tudo')
+    transacao.oncomplete = () => ok()
+    transacao.onerror = () => falha(transacao.error ?? new Error('Não foi possível salvar neste aparelho.'))
+  })
+}
+
 function criarApiDemo(): Api {
-  function ler(): DadosDemo {
+  const temIndexedDb = typeof indexedDB !== 'undefined'
+  let cache: Promise<DadosDemo> | null = null
+
+  function doLocalStorage(): DadosDemo | null {
     try {
       const salvo = localStorage.getItem(CHAVE_DEMO)
-      if (salvo) {
-        const dados = JSON.parse(salvo) as DadosDemo
-        return { orcamentos: dados.orcamentos ?? [], configuracoes: completarConfig(dados.configuracoes) }
-      }
+      return salvo ? (JSON.parse(salvo) as DadosDemo) : null
     } catch {
-      // dados corrompidos: recomeça do zero
+      return null // dados corrompidos: recomeça do zero
     }
-    return { orcamentos: [], configuracoes: completarConfig(null) }
   }
 
-  function gravar(dados: DadosDemo) {
-    localStorage.setItem(CHAVE_DEMO, JSON.stringify(dados))
+  async function carregar(): Promise<DadosDemo> {
+    // pede ao navegador para não apagar os dados quando faltar espaço
+    void navigator.storage?.persist?.().catch(() => {})
+    let dados: DadosDemo | null = null
+    if (temIndexedDb) {
+      dados = await lerLocal()
+      if (!dados) {
+        dados = doLocalStorage()
+        if (dados) {
+          await gravarLocal(dados)
+          localStorage.removeItem(CHAVE_DEMO)
+        }
+      }
+    } else {
+      dados = doLocalStorage()
+    }
+    return { orcamentos: dados?.orcamentos ?? [], configuracoes: completarConfig(dados?.configuracoes) }
+  }
+
+  async function ler(): Promise<DadosDemo> {
+    cache ??= carregar().catch((e) => {
+      cache = null
+      throw e
+    })
+    const dados = await cache
+    return { orcamentos: [...dados.orcamentos], configuracoes: dados.configuracoes }
+  }
+
+  async function gravar(dados: DadosDemo) {
+    if (temIndexedDb) await gravarLocal(dados)
+    else localStorage.setItem(CHAVE_DEMO, JSON.stringify(dados))
+    cache = Promise.resolve(dados)
   }
 
   return {
     modo: 'demo',
     async usuarioAtual() {
-      return 'demonstração'
+      return 'este aparelho'
     },
     aoMudarLogin() {
       return () => {}
@@ -171,14 +233,14 @@ function criarApiDemo(): Api {
     async entrar() {},
     async sair() {},
     async listar() {
-      return ordenar(ler().orcamentos.map(normalizar))
+      return ordenar((await ler()).orcamentos.map(normalizar))
     },
     async obter(id) {
-      const o = ler().orcamentos.find((x) => x.id === id)
+      const o = (await ler()).orcamentos.find((x) => x.id === id)
       return o ? normalizar(o) : null
     },
     async salvar(orcamento) {
-      const dados = ler()
+      const dados = await ler()
       const agora = new Date().toISOString()
       const existente = orcamento.id ? dados.orcamentos.find((o) => o.id === orcamento.id) : undefined
       const salvo: Orcamento = existente
@@ -192,22 +254,22 @@ function criarApiDemo(): Api {
             atualizado_em: agora,
           }
       dados.orcamentos = [...dados.orcamentos.filter((o) => o.id !== salvo.id), salvo]
-      gravar(dados)
+      await gravar(dados)
       return salvo
     },
     async excluir(id) {
-      const dados = ler()
+      const dados = await ler()
       dados.orcamentos = dados.orcamentos.filter((o) => o.id !== id)
-      gravar(dados)
+      await gravar(dados)
     },
     async obterConfig() {
-      return ler().configuracoes
+      return (await ler()).configuracoes
     },
     async salvarConfig(config) {
-      gravar({ ...ler(), configuracoes: config })
+      await gravar({ ...(await ler()), configuracoes: config })
     },
     async restaurar(backup) {
-      gravar({ orcamentos: backup.orcamentos, configuracoes: completarConfig(backup.configuracoes) })
+      await gravar({ orcamentos: backup.orcamentos, configuracoes: completarConfig(backup.configuracoes) })
     },
     ...fotosEmbutidas,
   }
@@ -381,9 +443,12 @@ function criarApiArtifact(): Api {
       }
     },
     urlFoto(ref) {
+      // fotos vindas de um backup do site próprio já são a própria imagem
+      if (ref.startsWith('data:')) return ref
       return urlsDaVisita.get(ref) ?? `/_blob/${ref}`
     },
     async excluirFoto(ref) {
+      if (ref.startsWith('data:')) return
       const cap = await arquivos()
       if (!cap) return
       try {

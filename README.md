@@ -9,7 +9,12 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **PDF para o cliente aprovar**, com seus dados, PIX, serviços, total, forma de pagamento, condições, validade e campo de assinatura. No celular, o botão “Enviar PDF” abre o compartilhamento (WhatsApp, e-mail…).
 - **Resumo mensal**: faturamento, custos, lucro, margem, totais por status, custos por tipo e gráfico dos últimos 6 meses.
 - **Ajustes**: dados da empresa, logo, condições e validade padrão, catálogo de serviços.
-- **Backup e restauração** em arquivo `.json`.
+- **Agenda**: serviços de hoje e dos próximos dias, aprovados sem data, datas que já passaram e orçamentos enviados há 3 dias sem resposta.
+- **Mensagens prontas no WhatsApp**: resumo do orçamento (total, validade, PIX), cobrar resposta, confirmar agendamento e agradecer/pedir indicação.
+- **Google Agenda**: um toque cria o evento do serviço com endereço e telefone.
+- **Recibo de pagamento** em PDF, com o valor por extenso.
+- **Cliente já atendido**: ao digitar o nome, oferece trazer telefone e endereço do último orçamento.
+- **Backup e restauração** em arquivo `.json` (com as fotos dentro).
 - Login com e-mail e senha: só você acessa.
 
 ## Pós-obra
@@ -44,7 +49,20 @@ O sistema também roda como página privada no claude.ai, com banco de dados emb
 
 - Para gerar o arquivo da página: `npm run build:artifact` (sai em `artifact/orcamentos.html`).
 - Nessa versão, os arquivos (PDF e backup) são entregues pelo próprio Claude: no celular, abre as opções de compartilhar/salvar.
-- As fotos ficam guardadas na própria página. O backup leva só a referência delas: restaurando na mesma página, as fotos continuam lá.
+- As fotos ficam guardadas na própria página e vão dentro do backup, então o arquivo também serve para levar tudo para o site próprio.
+- A página do claude.ai não acessa outros sites: lá a busca de CEP vira um link para o Google.
+
+## Publicar no Netlify (sem configurar nada)
+
+Sem Supabase, o site guarda os orçamentos **no próprio aparelho** (banco do navegador, com as fotos). Cada aparelho tem os seus dados: use sempre o mesmo celular e baixe um backup de vez em quando.
+
+1. Crie uma conta em [netlify.com](https://app.netlify.com/signup) entrando com o GitHub.
+2. **Add new project → Import an existing project → GitHub** e escolha `orcamentos-higienizacao`.
+3. As configurações já vêm do arquivo [`netlify.toml`](netlify.toml): é só clicar em **Deploy**. O endereço fica algo como `https://nome-escolhido.netlify.app` (dá para trocar o nome em **Project configuration → Change project name**).
+4. Para levar os dados da versão do claude.ai: lá, **Ajustes → Baixar backup**; no site novo, **Ajustes → Restaurar backup** com esse arquivo.
+
+Cada envio para a branch `main` atualiza o site sozinho. Sem ligar o GitHub, também dá para rodar `npm run build` e arrastar a pasta `dist` em [app.netlify.com/drop](https://app.netlify.com/drop).
+Se um dia quiser os mesmos dados em vários aparelhos, configure o Supabase (abaixo) e coloque as duas variáveis `VITE_SUPABASE_…` em **Project configuration → Environment variables** do Netlify.
 
 ## Publicar online (passo a passo)
 
@@ -87,7 +105,7 @@ Abra o endereço no celular e:
 
 - No plano gratuito, o Supabase **pausa o projeto depois de 7 dias sem nenhum acesso**. Os dados não se perdem: basta entrar no painel do Supabase e clicar em **Restore project**. Usando o sistema toda semana, isso não acontece.
 - Faça um **backup** de vez em quando em **Ajustes → Baixar backup** e guarde o arquivo no Google Drive. A restauração **substitui** todos os dados atuais pelos do arquivo.
-- Se o site abrir com a faixa amarela “Modo demonstração”, a conexão do passo 2 não foi configurada: os dados estão sendo salvos só naquele aparelho.
+- Se o site abrir com a faixa amarela “Os orçamentos ficam salvos neste aparelho”, a conexão do passo 2 não foi configurada: os dados estão sendo salvos só naquele aparelho.
 
 ---
 

@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 
 const ABAS = [
   { para: '/', rotulo: 'Orçamentos', icone: 'M9 12h6m-6 4h6M7 4h7l5 5v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z' },
+  { para: '/agenda', rotulo: 'Agenda', icone: 'M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm3 8h2m4 0h2m-8 4h2' },
   { para: '/resumo', rotulo: 'Resumo', icone: 'M4 20V10m6 10V4m6 16v-7m4 7H2' },
   {
     para: '/configuracoes',
@@ -17,7 +18,7 @@ export default function Layout() {
     <div className="min-h-dvh pb-[calc(4rem+env(safe-area-inset-bottom))]">
       {api.modo === 'demo' && (
         <div className="bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900">
-          Modo demonstração: os dados ficam só neste aparelho. Configure o Supabase para salvar online (veja o README).
+          Os orçamentos ficam salvos neste aparelho. Baixe um backup em Ajustes de vez em quando.
         </div>
       )}
       <Outlet />
@@ -25,7 +26,7 @@ export default function Layout() {
         aria-label="Navegação principal"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="mx-auto grid max-w-3xl grid-cols-3">
+        <div className="mx-auto grid max-w-3xl grid-cols-4">
           {ABAS.map((aba) => (
             <NavLink
               key={aba.para}

@@ -2,6 +2,7 @@ import type { Backup, Configuracoes, Orcamento } from '../types'
 import { STATUS } from './constantes'
 import { hojeISO } from './calc'
 import { salvarArquivo } from './plataforma'
+import { blobParaDataUrl } from './imagem'
 
 export function montarBackup(configuracoes: Configuracoes, orcamentos: Orcamento[]): Backup {
   return {
@@ -11,6 +12,32 @@ export function montarBackup(configuracoes: Configuracoes, orcamentos: Orcamento
     configuracoes,
     orcamentos,
   }
+}
+
+/**
+ * Coloca as fotos dentro do backup (como imagem), para o arquivo funcionar em outro lugar:
+ * as fotos guardadas no claude.ai só abrem lá.
+ */
+export async function embutirFotos(orcamentos: Orcamento[], urlFoto: (ref: string) => string): Promise<Orcamento[]> {
+  const resultado: Orcamento[] = []
+  for (const o of orcamentos) {
+    const fotos = []
+    for (const f of o.fotos) {
+      if (f.ref.startsWith('data:')) {
+        fotos.push(f)
+        continue
+      }
+      try {
+        const resposta = await fetch(urlFoto(f.ref))
+        if (!resposta.ok) throw new Error()
+        fotos.push({ ...f, ref: await blobParaDataUrl(await resposta.blob()) })
+      } catch {
+        fotos.push(f) // foto inacessível: fica a referência, como antes
+      }
+    }
+    resultado.push({ ...o, fotos })
+  }
+  return resultado
 }
 
 export function baixarBackup(backup: Backup): Promise<boolean> {
