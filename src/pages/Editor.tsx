@@ -464,19 +464,33 @@ export default function Editor() {
                     onChange={(e) => {
                       const cep = formatarCep(e.target.value)
                       alterar('cep', cep)
-                      // busca sozinho ao completar os 8 números
+                      // busca sozinho ao completar os 8 números (no claude.ai a página não acessa outros sites)
+                      if (MODO_ARTIFACT) return
                       if (soDigitos(cep).length < 8) ultimoCep.current = ''
                       else if (soDigitos(cep) !== ultimoCep.current) void procurarCep(cep, 'automatico')
                     }}
                   />
-                  <button
-                    type="button"
-                    className="btn-secundario shrink-0"
-                    disabled={buscandoCep || soDigitos(atual.cep).length !== 8}
-                    onClick={() => void procurarCep(atual.cep, 'botao')}
-                  >
-                    {buscandoCep ? 'Buscando…' : 'Buscar CEP'}
-                  </button>
+                  {MODO_ARTIFACT ? (
+                    soDigitos(atual.cep).length === 8 && (
+                      <a
+                        className="btn-secundario shrink-0"
+                        href={`https://www.google.com/search?q=${encodeURIComponent(`CEP ${atual.cep}`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Ver no Google
+                      </a>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-secundario shrink-0"
+                      disabled={buscandoCep || soDigitos(atual.cep).length !== 8}
+                      onClick={() => void procurarCep(atual.cep, 'botao')}
+                    >
+                      {buscandoCep ? 'Buscando…' : 'Buscar CEP'}
+                    </button>
+                  )}
                 </div>
               </Campo>
               <Campo rotulo="Endereço">
