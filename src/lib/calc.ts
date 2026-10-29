@@ -17,6 +17,21 @@ export function subtotal(itens: Item[]): number {
   return arredondar(itens.reduce((soma, item) => soma + totalItem(item), 0))
 }
 
+/**
+ * Pós-obra: mantém a linha "por área" dos itens com quantidade = m² e valor = preço do m².
+ * Cria a linha (no lugar de uma linha vazia, se houver) quando ainda não existe.
+ */
+export function itensComArea(itens: Item[], area: number, valorM2: number, id: string): Item[] {
+  if (itens.some((i) => i.por_area)) {
+    return itens.map((i) => (i.por_area ? { ...i, quantidade: area, valor_unitario: valorM2 } : i))
+  }
+  if (!area && !valorM2) return itens
+  const linha: Item = { id, descricao: 'Limpeza pós-obra (m²)', quantidade: area, valor_unitario: valorM2, por_area: true }
+  const vazia = itens.findIndex((i) => !i.descricao.trim() && !i.valor_unitario)
+  if (vazia >= 0) return itens.map((i, k) => (k === vazia ? { ...linha, id: i.id } : i))
+  return [linha, ...itens]
+}
+
 type ParaTotais = Pick<OrcamentoEditavel, 'itens' | 'desconto_tipo' | 'desconto' | 'custos'>
 
 /** Desconto em R$, nunca maior que o subtotal. */

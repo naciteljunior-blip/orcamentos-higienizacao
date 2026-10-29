@@ -57,7 +57,11 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
   async function salvarForm() {
     setSalvando(true)
     try {
-      await salvar({ ...form, catalogo: form.catalogo.filter((s) => s.descricao.trim()) })
+      await salvar({
+        ...form,
+        catalogo: form.catalogo.filter((s) => s.descricao.trim()),
+        checklist_pos_obra: form.checklist_pos_obra.filter((c) => c.descricao.trim()),
+      })
       setAviso('Configurações salvas')
     } catch (e) {
       setAviso(`Erro ao salvar: ${(e as Error).message}`)
@@ -202,6 +206,13 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
                 onChange={(e) => alterar('condicoes_padrao', e.target.value)}
               />
             </Campo>
+            <Campo rotulo="Condições padrão — pós-obra">
+              <textarea
+                className="campo min-h-36"
+                value={form.condicoes_padrao_pos_obra}
+                onChange={(e) => alterar('condicoes_padrao_pos_obra', e.target.value)}
+              />
+            </Campo>
             <Campo rotulo="Condições padrão — impressão 3D">
               <textarea
                 className="campo min-h-36"
@@ -210,6 +221,63 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
               />
             </Campo>
           </div>
+        </Secao>
+
+        <Secao titulo="Pós-obra">
+          <Campo rotulo="Valor padrão do m²" className="max-w-56">
+            <CampoNumero
+              valor={form.valor_m2_pos_obra}
+              prefixo="R$"
+              aoMudar={(v) => alterar('valor_m2_pos_obra', Math.max(0, v))}
+            />
+          </Campo>
+          <p className="mt-2 text-sm text-slate-500">Já vem preenchido nos novos orçamentos de pós-obra. Pode ser mudado em cada um.</p>
+
+          <span className="rotulo mt-4">Lista padrão do que está incluso</span>
+          <ul className="space-y-2">
+            {form.checklist_pos_obra.map((c, indice) => (
+              <li key={c.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={c.incluso}
+                  aria-label={`Item ${indice + 1}: ${c.incluso ? 'incluso' : 'não incluso'}`}
+                  onClick={() =>
+                    alterar('checklist_pos_obra', form.checklist_pos_obra.map((x) => (x.id === c.id ? { ...x, incluso: !x.incluso } : x)))
+                  }
+                  className={`w-24 rounded-full px-2 py-1 text-xs font-semibold ring-1 ${
+                    c.incluso ? 'bg-emerald-50 text-emerald-800 ring-emerald-300' : 'bg-red-50 text-red-700 ring-red-200'
+                  }`}
+                >
+                  {c.incluso ? '✓ Incluso' : '✕ Não incluso'}
+                </button>
+                <input
+                  className="campo"
+                  aria-label={`Descrição do item ${indice + 1} da lista`}
+                  value={c.descricao}
+                  onChange={(e) =>
+                    alterar('checklist_pos_obra', form.checklist_pos_obra.map((x) => (x.id === c.id ? { ...x, descricao: e.target.value } : x)))
+                  }
+                />
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                  aria-label={`Remover ${c.descricao || 'item'} da lista`}
+                  onClick={() => alterar('checklist_pos_obra', form.checklist_pos_obra.filter((x) => x.id !== c.id))}
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="btn-secundario mt-3 w-full"
+            onClick={() => alterar('checklist_pos_obra', [...form.checklist_pos_obra, { id: novoId(), descricao: '', incluso: true }])}
+          >
+            + Adicionar item à lista
+          </button>
+          <p className="mt-2 text-xs text-slate-500">Os novos orçamentos de pós-obra começam com esta lista. Dá para ajustar em cada um.</p>
         </Secao>
 
         <Secao titulo="Impressão 3D">

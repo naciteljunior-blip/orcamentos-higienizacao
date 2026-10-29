@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Orcamento } from '../types'
 import {
+  itensComArea,
   mesAnterior,
   numeroFormatado,
   resultado,
@@ -13,7 +14,7 @@ import {
 } from './calc'
 import { dataBR, lerNumero, linkWhatsApp, reais } from './formato'
 import { lerBackup, montarBackup } from './backup'
-import { CONFIG_PADRAO } from './constantes'
+import { CONFIG_PADRAO, POS_OBRA_PADRAO } from './constantes'
 import { textoPagamento } from './pdf'
 
 function orc(parcial: Partial<Orcamento>): Orcamento {
@@ -41,6 +42,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     fotos: [],
     pdf_fotos: false,
     impressao: { descricao: '', unidades: 1, prazo_dias: 7, filamento_kg: 0, nfc: false },
+    pos_obra: { ...POS_OBRA_PADRAO },
     condicoes: '',
     observacoes: '',
     criado_em: '',
@@ -185,5 +187,27 @@ describe('impressão 3D', () => {
   it('não fala em "ato do serviço" no pagamento à vista', () => {
     expect(textoPagamento({ tipo: 'impressao3d', pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, 150)).toBe(`À vista: ${reais(150)}`)
     expect(textoPagamento({ tipo: 'higienizacao', pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, 150)).toContain('no ato do serviço')
+  })
+})
+
+describe('pós-obra', () => {
+  it('cria a linha da área no lugar da linha vazia e depois só a atualiza', () => {
+    const vazia = { id: 'v', descricao: '', quantidade: 1, valor_unitario: 0 }
+    let itens = itensComArea([vazia], 120, 8, 'novo')
+    expect(itens).toEqual([{ id: 'v', descricao: 'Limpeza pós-obra (m²)', quantidade: 120, valor_unitario: 8, por_area: true }])
+    itens = [...itens, item(1, 150)]
+    itens = itensComArea(itens.map((i) => (i.por_area ? { ...i, descricao: 'Pós-obra apto 42 (m²)' } : i)), 95.5, 9, 'outro')
+    expect(itens).toHaveLength(2)
+    expect(itens[0]).toMatchObject({ descricao: 'Pós-obra apto 42 (m²)', quantidade: 95.5, valor_unitario: 9 })
+    expect(total(orc({ itens }))).toBe(1009.5)
+  })
+
+  it('sem área nem valor não cria linha', () => {
+    expect(itensComArea([item(1, 50)], 0, 0, 'x')).toHaveLength(1)
+  })
+
+  it('coloca a linha da área no início quando não há linha vazia', () => {
+    const itens = itensComArea([item(1, 50)], 80, 0, 'x')
+    expect(itens[0]).toMatchObject({ id: 'x', quantidade: 80, por_area: true })
   })
 })

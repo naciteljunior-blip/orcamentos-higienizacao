@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
 import type { Configuracoes, Orcamento } from '../types'
-import { LOCAL_ROTULO } from './constantes'
+import { LOCAL_ROTULO, NIVEL_ROTULO } from './constantes'
 import { numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto, valorParcela } from './calc'
 import { dataBR, dataHoraBR, decimal, reais } from './formato'
 import { imagemParaPdf } from './imagem'
@@ -161,6 +161,48 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
       ['Endereço', o.endereco],
       ['Bloco / Apto / Complemento', o.complemento],
     ])
+  }
+
+  if (o.tipo === 'pos_obra') {
+    const p = o.pos_obra
+    const plural = (n: number, um: string, varios: string) => (n ? `${n} ${n === 1 ? um : varios}` : '')
+    const comodos = [
+      plural(p.quartos, 'quarto', 'quartos'),
+      plural(p.banheiros, 'banheiro', 'banheiros'),
+      plural(p.salas, 'sala', 'salas'),
+      plural(p.cozinhas, 'cozinha', 'cozinhas'),
+      plural(p.areas_externas, 'área externa', 'áreas externas'),
+    ].filter(Boolean)
+    titulo('Limpeza pós-obra')
+    pares([
+      ['Área', p.area_m2 ? `${decimal(p.area_m2)} m²` : ''],
+      ['Nível de sujeira', NIVEL_ROTULO[p.nivel]],
+      ['Cômodos', comodos.join(', ')],
+      ['Equipe e prazo', [plural(p.equipe, 'profissional', 'profissionais'), plural(p.dias, 'dia', 'dias')].filter(Boolean).join(' · ')],
+    ])
+    const inclusos = p.checklist.filter((c) => c.incluso && c.descricao.trim())
+    const naoInclusos = p.checklist.filter((c) => !c.incluso && c.descricao.trim())
+    if (inclusos.length || naoInclusos.length) {
+      garantirEspaco(20)
+      const linhas = Math.max(inclusos.length, naoInclusos.length)
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGEM, right: MARGEM },
+        head: [['O que está incluso', 'Não incluso']],
+        body: Array.from({ length: linhas }, (_, i) => [
+          inclusos[i] ? `• ${inclusos[i].descricao}` : '',
+          naoInclusos[i] ? `• ${naoInclusos[i].descricao}` : '',
+        ]),
+        theme: 'plain',
+        styles: { font: 'helvetica', fontSize: 9, textColor: COR_TEXTO, cellPadding: { top: 0.7, bottom: 0.7, left: 1.4, right: 1.4 } },
+        headStyles: { fontStyle: 'bold', fontSize: 9 },
+        columnStyles: { 0: { cellWidth: UTIL * 0.58 } },
+        didParseCell: (c) => {
+          if (c.section === 'head') c.cell.styles.textColor = c.column.index === 0 ? [21, 128, 61] : [185, 28, 28]
+        },
+      })
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5
+    }
   }
 
   // ---- Serviços ----

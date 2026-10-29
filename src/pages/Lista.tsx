@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Cabecalho, Carregando, Erro, StatusBadge } from '../components/ui'
 import { api } from '../lib/api'
 import { numeroFormatado, total } from '../lib/calc'
-import { STATUS, STATUS_ROTULO, TIPO_ROTULO, TIPOS } from '../lib/constantes'
+import { STATUS, STATUS_ROTULO, TIPO_COR, TIPO_ROTULO, TIPOS } from '../lib/constantes'
 import { dataHoraBR, decimal, reais } from '../lib/formato'
 import type { Orcamento, Status } from '../types'
 
@@ -111,7 +111,9 @@ export default function Lista() {
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-slate-500">
                       {numeroFormatado(o.numero)}
-                      {o.tipo === 'impressao3d' && <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 text-violet-800 ring-1 ring-violet-200">3D</span>}
+                      {o.tipo !== 'higienizacao' && (
+                        <span className={`ml-1.5 rounded px-1.5 py-0.5 ring-1 ${TIPO_COR[o.tipo]}`}>{o.tipo === 'impressao3d' ? '3D' : 'Pós-obra'}</span>
+                      )}
                     </p>
                     <p className="truncate font-semibold">{o.cliente_nome || 'Sem nome'}</p>
                   </div>
@@ -128,6 +130,7 @@ export default function Lista() {
                     ) : (
                       <>
                         {dataHoraBR(o.data_servico, o.hora_servico) || 'Sem data marcada'}
+                        {o.tipo === 'pos_obra' && o.pos_obra.area_m2 > 0 && ` · ${decimal(o.pos_obra.area_m2)} m²`}
                         {o.endereco && ` · ${o.endereco}`}
                       </>
                     )}

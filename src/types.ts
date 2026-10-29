@@ -3,7 +3,8 @@ export type LocalTipo = 'apartamento' | 'predio' | 'casa' | 'comercio'
 export type CustoTipo = 'produto' | 'maquina' | 'aluguel' | 'ajudante' | 'transporte' | 'filamento' | 'outros'
 export type DescontoTipo = 'valor' | 'percentual'
 export type PagamentoForma = 'a_vista' | 'parcelado'
-export type TipoOrcamento = 'higienizacao' | 'impressao3d'
+export type TipoOrcamento = 'higienizacao' | 'impressao3d' | 'pos_obra'
+export type NivelSujeira = 'leve' | 'media' | 'pesada'
 
 /** Dados próprios de um orçamento de impressão 3D. */
 export interface Impressao {
@@ -22,6 +23,31 @@ export interface Item {
   descricao: string
   quantidade: number
   valor_unitario: number
+  /** pós-obra: linha calculada pela área (quantidade = m², valor = preço do m²) */
+  por_area?: boolean
+}
+
+export interface ItemChecklist {
+  id: string
+  descricao: string
+  incluso: boolean
+}
+
+/** Dados próprios de um orçamento de limpeza pós-obra. */
+export interface PosObra {
+  area_m2: number
+  valor_m2: number
+  nivel: NivelSujeira
+  quartos: number
+  banheiros: number
+  salas: number
+  cozinhas: number
+  areas_externas: number
+  /** pessoas na equipe */
+  equipe: number
+  dias: number
+  /** o que está e o que não está incluso (sai no PDF) */
+  checklist: ItemChecklist[]
 }
 
 export interface Custo {
@@ -68,6 +94,7 @@ export interface Orcamento {
   /** inclui as fotos numa página extra do PDF */
   pdf_fotos: boolean
   impressao: Impressao
+  pos_obra: PosObra
   condicoes: string
   observacoes: string
   criado_em: string
@@ -100,6 +127,11 @@ export interface Configuracoes {
   condicoes_padrao_3d: string
   /** custo do filamento por kg, para lançar o custo interno */
   filamento_preco_kg: number
+  condicoes_padrao_pos_obra: string
+  /** preço sugerido do m² nos novos orçamentos de pós-obra */
+  valor_m2_pos_obra: number
+  /** lista padrão de inclusos / não inclusos */
+  checklist_pos_obra: ItemChecklist[]
   validade_padrao: number
   catalogo: ServicoCatalogo[]
 }

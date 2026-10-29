@@ -1,10 +1,39 @@
-import type { Configuracoes, CustoTipo, Impressao, LocalTipo, Status, TipoOrcamento } from '../types'
+import type { Configuracoes, CustoTipo, Impressao, LocalTipo, NivelSujeira, PosObra, Status, TipoOrcamento } from '../types'
 
-export const TIPOS: TipoOrcamento[] = ['higienizacao', 'impressao3d']
+export const TIPOS: TipoOrcamento[] = ['higienizacao', 'pos_obra', 'impressao3d']
 
 export const TIPO_ROTULO: Record<TipoOrcamento, string> = {
   higienizacao: 'Higienização',
+  pos_obra: 'Pós-obra',
   impressao3d: 'Impressão 3D',
+}
+
+export const TIPO_COR: Record<TipoOrcamento, string> = {
+  higienizacao: 'bg-teal-50 text-teal-800 ring-teal-200',
+  pos_obra: 'bg-orange-50 text-orange-800 ring-orange-200',
+  impressao3d: 'bg-violet-50 text-violet-800 ring-violet-200',
+}
+
+export const NIVEIS: NivelSujeira[] = ['leve', 'media', 'pesada']
+
+export const NIVEL_ROTULO: Record<NivelSujeira, string> = {
+  leve: 'Leve',
+  media: 'Média',
+  pesada: 'Pesada',
+}
+
+export const POS_OBRA_PADRAO: PosObra = {
+  area_m2: 0,
+  valor_m2: 0,
+  nivel: 'media',
+  quartos: 0,
+  banheiros: 0,
+  salas: 0,
+  cozinhas: 0,
+  areas_externas: 0,
+  equipe: 0,
+  dias: 0,
+  checklist: [],
 }
 
 export const IMPRESSAO_PADRAO: Impressao = { descricao: '', unidades: 1, prazo_dias: 7, filamento_kg: 0, nfc: false }
@@ -79,6 +108,30 @@ export const CONFIG_PADRAO: Configuracoes = {
     'Pequenas marcas de camada são normais na impressão 3D.\n' +
     'Alterações no modelo depois da aprovação podem mudar o valor e o prazo.',
   filamento_preco_kg: 0,
+  condicoes_padrao_pos_obra:
+    'Pagamento via PIX, dinheiro ou cartão.\n' +
+    'O serviço é agendado após a aprovação do orçamento.\n' +
+    'A obra deve estar concluída, com água e energia elétrica funcionando no imóvel.\n' +
+    'O valor considera a área informada; se a área real for diferente, o valor é ajustado.',
+  valor_m2_pos_obra: 0,
+  checklist_pos_obra: [
+    ...[
+      'Remoção de respingos de tinta, cimento e massa',
+      'Limpeza de pisos e rejuntes',
+      'Limpeza de azulejos e revestimentos',
+      'Vidros e janelas (lado interno e partes externas de fácil acesso)',
+      'Armários por dentro e por fora',
+      'Banheiros, louças e metais',
+      'Portas, batentes e rodapés',
+      'Tomadas, interruptores e luminárias',
+      'Remoção de poeira em todos os cômodos',
+    ].map((descricao, i) => ({ id: `inc-${i + 1}`, descricao, incluso: true })),
+    ...[
+      'Retirada de entulho e restos de obra',
+      'Vidros externos em altura, sem acesso seguro',
+      'Higienização de estofados e tapetes (orçada à parte)',
+    ].map((descricao, i) => ({ id: `nao-${i + 1}`, descricao, incluso: false })),
+  ],
   validade_padrao: 30,
   catalogo: [
     { id: 'sofa-2', descricao: 'Higienização de sofá 2 lugares', valor: 0 },

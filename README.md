@@ -12,6 +12,12 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **Backup e restauração** em arquivo `.json`.
 - Login com e-mail e senha: só você acessa.
 
+## Pós-obra
+
+Em **Novo orçamento → Pós-obra**: área (m²) × valor do m² vira automaticamente a primeira linha dos serviços (dá para somar extras),
+nível de sujeira, cômodos, equipe e dias, e uma lista do que está **incluso / não incluso** que sai no PDF.
+Em **Ajustes** ficam o valor padrão do m², a lista padrão e as condições padrão do pós-obra.
+
 ## Impressão 3D
 
 Ao tocar em **Novo orçamento**, escolha **Higienização** ou **Impressão 3D**. O orçamento de impressão 3D troca "Local e data" por:

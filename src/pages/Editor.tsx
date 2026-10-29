@@ -4,12 +4,25 @@ import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Opcoes, Secao, 
 import { api, nomeArquivo } from '../lib/api'
 import { useConfirmar } from '../components/Confirmacao'
 import Fotos from '../components/Fotos'
+import PosObraCampos from '../components/PosObraCampos'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
-import { hojeISO, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
+import { hojeISO, itensComArea, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
 import { useConfig } from '../lib/configContexto'
-import { CUSTO_ROTULO, CUSTO_TIPOS, IMPRESSAO_PADRAO, LOCAL_ROTULO, LOCAL_TIPOS, STATUS, STATUS_ROTULO, TIPO_ROTULO } from '../lib/constantes'
+import {
+  CUSTO_ROTULO,
+  CUSTO_TIPOS,
+  IMPRESSAO_PADRAO,
+  LOCAL_ROTULO,
+  LOCAL_TIPOS,
+  POS_OBRA_PADRAO,
+  STATUS,
+  STATUS_ROTULO,
+  TIPO_COR,
+  TIPO_ROTULO,
+  TIPOS,
+} from '../lib/constantes'
 import { dataBR, decimal, linkWhatsApp, novoId, porcentagem, reais } from '../lib/formato'
-import type { Configuracoes, Custo, Impressao, Item, Orcamento, OrcamentoEditavel, OrcamentoNovo, TipoOrcamento } from '../types'
+import type { Configuracoes, Custo, Impressao, Item, Orcamento, OrcamentoEditavel, OrcamentoNovo, PosObra, TipoOrcamento } from '../types'
 
 function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): OrcamentoNovo {
   return {
@@ -34,7 +47,16 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
     fotos: [],
     pdf_fotos: false,
     impressao: { ...IMPRESSAO_PADRAO },
-    condicoes: tipo === 'impressao3d' ? config.condicoes_padrao_3d : config.condicoes_padrao,
+    pos_obra: {
+      ...POS_OBRA_PADRAO,
+      valor_m2: config.valor_m2_pos_obra,
+      checklist: config.checklist_pos_obra.map((c) => ({ ...c, id: novoId() })),
+    },
+    condicoes: {
+      higienizacao: config.condicoes_padrao,
+      impressao3d: config.condicoes_padrao_3d,
+      pos_obra: config.condicoes_padrao_pos_obra,
+    }[tipo],
     observacoes: '',
   }
 }
@@ -61,7 +83,7 @@ export default function Editor() {
   const navigate = useNavigate()
   const location = useLocation()
   const [params] = useSearchParams()
-  const tipoNovo: TipoOrcamento = params.get('tipo') === 'impressao3d' ? 'impressao3d' : 'higienizacao'
+  const tipoNovo = TIPOS.find((t) => t === params.get('tipo')) ?? 'higienizacao'
   const { config, carregada } = useConfig()
   const confirmar = useConfirmar()
 
@@ -143,7 +165,31 @@ export default function Editor() {
       return { ...a, itens, impressao: { ...a.impressao, ...mudanca } }
     })
   }
+  function alterarPosObra(mudanca: Partial<PosObra>) {
+    setO((a) => {
+      if (!a) return a
+      const pos_obra = { ...a.pos_obra, ...mudanca }
+      const mudouArea = mudanca.area_m2 !== undefined || mudanca.valor_m2 !== undefined
+      return { ...a, pos_obra, itens: mudouArea ? itensComArea(a.itens, pos_obra.area_m2, pos_obra.valor_m2, novoId()) : a.itens }
+    })
+  }
   function alterarItem(itemId: string, mudanca: Partial<Item>) {
+    const item = atual.itens.find((i) => i.id === itemId)
+    // a linha da área do pós-obra e os campos de área / valor do m² andam juntos
+    if (item?.por_area && (mudanca.quantidade !== undefined || mudanca.valor_unitario !== undefined)) {
+      setO((a) =>
+        a && {
+          ...a,
+          itens: a.itens.map((i) => (i.id === itemId ? { ...i, ...mudanca } : i)),
+          pos_obra: {
+            ...a.pos_obra,
+            ...(mudanca.quantidade !== undefined && { area_m2: mudanca.quantidade }),
+            ...(mudanca.valor_unitario !== undefined && { valor_m2: mudanca.valor_unitario }),
+          },
+        },
+      )
+      return
+    }
     alterar('itens', atual.itens.map((i) => (i.id === itemId ? { ...i, ...mudanca } : i)))
   }
   function alterarCusto(custoId: string, mudanca: Partial<Custo>) {
@@ -249,6 +295,7 @@ export default function Editor() {
 
   const whatsapp = linkWhatsApp(atual.cliente_telefone)
   const e3d = atual.tipo === 'impressao3d'
+  const ePos = atual.tipo === 'pos_obra'
   const imp = atual.impressao
   const custoFilamento = e3d ? Math.round(imp.filamento_kg * config.filamento_preco_kg * 100) / 100 : 0
 
@@ -263,7 +310,7 @@ export default function Editor() {
 
       <main className="mx-auto max-w-3xl space-y-3 p-4 pb-40">
         <p className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-600">
-          <span className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ${e3d ? 'bg-violet-50 text-violet-800 ring-violet-200' : 'bg-teal-50 text-teal-800 ring-teal-200'}`}>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs ring-1 ${TIPO_COR[atual.tipo]}`}>
             {TIPO_ROTULO[atual.tipo]}
           </span>
         </p>
@@ -407,6 +454,12 @@ export default function Editor() {
           </Secao>
         )}
 
+        {ePos && (
+          <Secao titulo="Limpeza pós-obra">
+            <PosObraCampos dados={atual.pos_obra} aoMudar={alterarPosObra} />
+          </Secao>
+        )}
+
         <Secao titulo={e3d ? 'Valores' : 'Serviços'}>
           <ul className="space-y-3">
             {atual.itens.map((item, indice) => (
@@ -414,7 +467,7 @@ export default function Editor() {
                 <div className="flex gap-2">
                   <input
                     className="campo"
-                    placeholder={e3d ? 'Ex.: Impressão das peças' : 'Descrição do serviço'}
+                    placeholder={e3d ? 'Ex.: Impressão das peças' : ePos ? 'Ex.: Limpeza de vidros externos' : 'Descrição do serviço'}
                     aria-label={`Descrição do item ${indice + 1}`}
                     value={item.descricao}
                     onChange={(e) => alterarItem(item.id, { descricao: e.target.value })}
@@ -429,10 +482,10 @@ export default function Editor() {
                   </button>
                 </div>
                 <div className="mt-2 grid grid-cols-[4.5rem_1fr_auto] items-end gap-2">
-                  <Campo rotulo="Qtd.">
+                  <Campo rotulo={item.por_area ? 'm²' : 'Qtd.'}>
                     <CampoNumero valor={item.quantidade} placeholder="1" aoMudar={(v) => alterarItem(item.id, { quantidade: v })} />
                   </Campo>
-                  <Campo rotulo="Valor unitário">
+                  <Campo rotulo={item.por_area ? 'Valor/m²' : 'Valor unitário'}>
                     <CampoNumero valor={item.valor_unitario} prefixo="R$" aoMudar={(v) => alterarItem(item.id, { valor_unitario: v })} />
                   </Campo>
                   <div className="pb-2.5 text-right">
@@ -447,7 +500,7 @@ export default function Editor() {
             <button type="button" className="btn-secundario" onClick={() => adicionarItem()}>
               + Adicionar item
             </button>
-            {!e3d && config.catalogo.length > 0 && (
+            {atual.tipo === 'higienizacao' && config.catalogo.length > 0 && (
               <select
                 className="campo font-semibold text-slate-700"
                 aria-label="Adicionar serviço do catálogo"
@@ -582,7 +635,13 @@ export default function Editor() {
             <Campo rotulo="Observações (aparecem no PDF)">
               <textarea
                 className="campo min-h-20"
-                placeholder={e3d ? 'Ex.: cor do filamento, acabamento, arquivo enviado pelo cliente' : 'Ex.: sofá com mancha de café no assento'}
+                placeholder={
+                  e3d
+                    ? 'Ex.: cor do filamento, acabamento, arquivo enviado pelo cliente'
+                    : ePos
+                      ? 'Ex.: muita tinta nos vidros da sala; prédio só libera serviço até 17h'
+                      : 'Ex.: sofá com mancha de café no assento'
+                }
                 value={atual.observacoes}
                 onChange={(e) => alterar('observacoes', e.target.value)}
               />

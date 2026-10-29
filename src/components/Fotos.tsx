@@ -10,6 +10,10 @@ const GRUPOS: Record<TipoOrcamento, Grupo[]> = {
     { momento: 'antes', titulo: 'Antes', dica: 'Como o estofado estava ao chegar' },
     { momento: 'depois', titulo: 'Depois', dica: 'Resultado da higienização' },
   ],
+  pos_obra: [
+    { momento: 'antes', titulo: 'Antes', dica: 'Como o imóvel estava' },
+    { momento: 'depois', titulo: 'Depois', dica: 'Resultado da limpeza' },
+  ],
   impressao3d: [
     { momento: 'antes', titulo: 'Referência', dica: 'Modelo ou ideia do cliente' },
     { momento: 'depois', titulo: 'Pronto', dica: 'Peça impressa' },
