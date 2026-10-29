@@ -1,9 +1,8 @@
 name: Publicar no GitHub Pages
 
+# O site é publicado pelo Netlify (netlify.toml). Este fluxo só roda se for disparado à mão,
+# para quem preferir o GitHub Pages (Settings > Pages > Source: GitHub Actions).
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
