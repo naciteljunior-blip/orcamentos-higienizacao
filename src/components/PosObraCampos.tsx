@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Campo, CampoNumero, Opcoes } from './ui'
+import Materiais from './Materiais'
 import { NIVEIS, NIVEL_ROTULO } from '../lib/constantes'
 import { novoId, reais } from '../lib/formato'
 import { arredondar } from '../lib/calc'
@@ -65,6 +66,11 @@ export default function PosObraCampos({ dados, aoMudar }: { dados: PosObra; aoMu
       </div>
 
       <Checklist itens={dados.checklist} aoMudar={(checklist) => aoMudar({ checklist })} />
+
+      <div>
+        <span className="rotulo">Produtos e equipamentos que serão usados (sai no PDF)</span>
+        <Materiais itens={dados.materiais} aoMudar={(materiais) => aoMudar({ materiais })} />
+      </div>
     </div>
   )
 }

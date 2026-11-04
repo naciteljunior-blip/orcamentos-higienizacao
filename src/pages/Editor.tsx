@@ -54,6 +54,7 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
       ...POS_OBRA_PADRAO,
       valor_m2: config.valor_m2_pos_obra,
       checklist: config.checklist_pos_obra.map((c) => ({ ...c, id: novoId() })),
+      materiais: config.materiais_pos_obra.map((m) => ({ ...m, id: novoId() })),
     },
     condicoes: {
       higienizacao: config.condicoes_padrao,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Secao } from '../components/ui'
+import Materiais from '../components/Materiais'
 import { useConfirmar } from '../components/Confirmacao'
 import { api } from '../lib/api'
 import { baixarBackup, embutirFotos, lerBackup, montarBackup } from '../lib/backup'
@@ -61,6 +62,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
         ...form,
         catalogo: form.catalogo.filter((s) => s.descricao.trim()),
         checklist_pos_obra: form.checklist_pos_obra.filter((c) => c.descricao.trim()),
+        materiais_pos_obra: form.materiais_pos_obra.filter((m) => m.descricao.trim()),
       })
       setAviso('Configurações salvas')
     } catch (e) {
@@ -279,6 +281,10 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
             + Adicionar item à lista
           </button>
           <p className="mt-2 text-xs text-slate-500">Os novos orçamentos de pós-obra começam com esta lista. Dá para ajustar em cada um.</p>
+
+          <span className="rotulo mt-4">Produtos e equipamentos padrão</span>
+          <Materiais itens={form.materiais_pos_obra} aoMudar={(lista) => alterar('materiais_pos_obra', lista)} />
+          <p className="mt-2 text-xs text-slate-500">Também vêm nos novos orçamentos de pós-obra e saem no PDF.</p>
         </Secao>
 
         <Secao titulo="Impressão 3D">

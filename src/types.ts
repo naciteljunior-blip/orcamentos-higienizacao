@@ -33,6 +33,15 @@ export interface ItemChecklist {
   incluso: boolean
 }
 
+export type CategoriaMaterial = 'produto' | 'consumo' | 'ferramenta'
+
+/** Produto, material ou equipamento usado no serviço (sai no PDF do pós-obra). */
+export interface Material {
+  id: string
+  categoria: CategoriaMaterial
+  descricao: string
+}
+
 /** Dados próprios de um orçamento de limpeza pós-obra. */
 export interface PosObra {
   area_m2: number
@@ -48,6 +57,8 @@ export interface PosObra {
   dias: number
   /** o que está e o que não está incluso (sai no PDF) */
   checklist: ItemChecklist[]
+  /** produtos, materiais e equipamentos que serão usados */
+  materiais: Material[]
 }
 
 export interface Custo {
@@ -133,6 +144,8 @@ export interface Configuracoes {
   valor_m2_pos_obra: number
   /** lista padrão de inclusos / não inclusos */
   checklist_pos_obra: ItemChecklist[]
+  /** lista padrão de produtos e equipamentos do pós-obra */
+  materiais_pos_obra: Material[]
   validade_padrao: number
   catalogo: ServicoCatalogo[]
 }

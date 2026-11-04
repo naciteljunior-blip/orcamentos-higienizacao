@@ -20,8 +20,8 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 ## Pós-obra
 
 Em **Novo orçamento → Pós-obra**: área (m²) × valor do m² vira automaticamente a primeira linha dos serviços (dá para somar extras),
-nível de sujeira, cômodos, equipe e dias, e uma lista do que está **incluso / não incluso** que sai no PDF.
-Em **Ajustes** ficam o valor padrão do m², a lista padrão e as condições padrão do pós-obra.
+nível de sujeira, cômodos, equipe e dias, uma lista do que está **incluso / não incluso** e a lista de **produtos e equipamentos** usados (produtos de limpeza, materiais de consumo, ferramentas), que saem no PDF.
+Em **Ajustes** ficam o valor padrão do m², as listas padrão e as condições padrão do pós-obra.
 
 ## Impressão 3D
 

@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
 import type { Configuracoes, Orcamento } from '../types'
-import { LOCAL_ROTULO, NIVEL_ROTULO, TIPO_ROTULO } from './constantes'
+import { CATEGORIA_MATERIAL_ROTULO, CATEGORIAS_MATERIAL, LOCAL_ROTULO, NIVEL_ROTULO, TIPO_ROTULO } from './constantes'
 import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto } from './calc'
 import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
@@ -197,6 +197,26 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
         didParseCell: (c) => {
           if (c.section === 'head') c.cell.styles.textColor = c.column.index === 0 ? [21, 128, 61] : [185, 28, 28]
         },
+      })
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5
+    }
+
+    const grupos = CATEGORIAS_MATERIAL.map((c) => p.materiais.filter((m) => m.categoria === c && m.descricao.trim()))
+    if (grupos.some((g) => g.length)) {
+      titulo('Produtos e equipamentos utilizados')
+      const colunas = CATEGORIAS_MATERIAL.filter((_, i) => grupos[i].length)
+      const listas = grupos.filter((g) => g.length)
+      autoTable(doc, {
+        startY: y,
+        margin: { left: MARGEM, right: MARGEM },
+        head: [colunas.map((c) => CATEGORIA_MATERIAL_ROTULO[c])],
+        body: Array.from({ length: Math.max(...listas.map((g) => g.length)) }, (_, i) =>
+          listas.map((g) => (g[i] ? `• ${g[i].descricao}` : '')),
+        ),
+        theme: 'plain',
+        styles: { font: 'helvetica', fontSize: 8.5, textColor: COR_TEXTO, cellPadding: { top: 0.6, bottom: 0.6, left: 1.4, right: 1.4 } },
+        headStyles: { fontStyle: 'bold', fontSize: 9, textColor: COR_DESTAQUE },
+        columnStyles: Object.fromEntries(colunas.map((_, i) => [i, { cellWidth: UTIL / colunas.length }])),
       })
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5
     }

@@ -1,4 +1,4 @@
-import type { Configuracoes, CustoTipo, Impressao, LocalTipo, NivelSujeira, PosObra, Status, TipoOrcamento } from '../types'
+import type { CategoriaMaterial, Configuracoes, CustoTipo, Impressao, LocalTipo, NivelSujeira, PosObra, Status, TipoOrcamento } from '../types'
 
 export const TIPOS: TipoOrcamento[] = ['higienizacao', 'pos_obra', 'impressao3d']
 
@@ -34,6 +34,38 @@ export const POS_OBRA_PADRAO: PosObra = {
   equipe: 0,
   dias: 0,
   checklist: [],
+  materiais: [],
+}
+
+export const CATEGORIAS_MATERIAL: CategoriaMaterial[] = ['produto', 'consumo', 'ferramenta']
+
+export const CATEGORIA_MATERIAL_ROTULO: Record<CategoriaMaterial, string> = {
+  produto: 'Produtos de limpeza',
+  consumo: 'Materiais de consumo',
+  ferramenta: 'Ferramentas e equipamentos',
+}
+
+const MATERIAIS_PADRAO: Record<CategoriaMaterial, string[]> = {
+  produto: [
+    'Detergente neutro',
+    'Limpador multiuso',
+    'Limpa-vidros',
+    'Desinfetante ou água sanitária',
+    'Limpador de pisos',
+    'Álcool 70%',
+    'Lustra-móveis (se houver móveis ou portas de madeira)',
+  ],
+  consumo: ['Panos de microfibra', 'Panos de chão e flanelas', 'Esponjas dupla face', 'Sacos de lixo reforçados'],
+  ferramenta: [
+    'Vassouras de pelo macio, rodos e pá de lixo',
+    'Baldes e borrifadores',
+    'Mop',
+    'Rodo limpa-vidros',
+    'Escada',
+    'Aspirador de pó',
+    'Espanador ou extensor para pontos altos',
+    'Raspador de vidro (para pequenos respingos de tinta ou massa)',
+  ],
 }
 
 export const IMPRESSAO_PADRAO: Impressao = { descricao: '', unidades: 1, prazo_dias: 7, filamento_kg: 0, nfc: false }
@@ -132,6 +164,9 @@ export const CONFIG_PADRAO: Configuracoes = {
       'Higienização de estofados e tapetes (orçada à parte)',
     ].map((descricao, i) => ({ id: `nao-${i + 1}`, descricao, incluso: false })),
   ],
+  materiais_pos_obra: CATEGORIAS_MATERIAL.flatMap((categoria) =>
+    MATERIAIS_PADRAO[categoria].map((descricao, i) => ({ id: `${categoria}-${i + 1}`, categoria, descricao })),
+  ),
   validade_padrao: 30,
   catalogo: [
     { id: 'sofa-2', descricao: 'Higienização de sofá 2 lugares', valor: 0 },
