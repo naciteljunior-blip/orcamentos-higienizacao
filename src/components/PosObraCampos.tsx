@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Campo, CampoNumero, Opcoes } from './ui'
-import Materiais from './Materiais'
+import { SelecaoMateriais } from './Materiais'
+import { useConfig } from '../lib/configContexto'
 import { NIVEIS, NIVEL_ROTULO } from '../lib/constantes'
 import { novoId, reais } from '../lib/formato'
 import { arredondar } from '../lib/calc'
@@ -17,6 +18,7 @@ const COMODOS: { campo: 'quartos' | 'banheiros' | 'salas' | 'cozinhas' | 'areas_
 const inteiro = (v: number) => Math.max(0, Math.round(v))
 
 export default function PosObraCampos({ dados, aoMudar }: { dados: PosObra; aoMudar: (mudanca: Partial<PosObra>) => void }) {
+  const { config } = useConfig()
   const valorArea = arredondar(dados.area_m2 * dados.valor_m2)
 
   return (
@@ -69,7 +71,7 @@ export default function PosObraCampos({ dados, aoMudar }: { dados: PosObra; aoMu
 
       <div>
         <span className="rotulo">Produtos e equipamentos que serão usados (sai no PDF)</span>
-        <Materiais itens={dados.materiais} aoMudar={(materiais) => aoMudar({ materiais })} />
+        <SelecaoMateriais opcoes={config.materiais_pos_obra} selecionados={dados.materiais} aoMudar={(materiais) => aoMudar({ materiais })} />
       </div>
     </div>
   )
