@@ -47,15 +47,20 @@ export const CATEGORIA_MATERIAL_ROTULO: Record<CategoriaMaterial, string> = {
 
 const MATERIAIS_PADRAO: Record<CategoriaMaterial, string[]> = {
   produto: [
+    'Pisoclean Limpeza Pesada LP',
+    'Duratto Removedor de Cimento',
+    'Spartan Decrust B',
     'Detergente neutro',
-    'Limpador multiuso',
+    'Desinfetante',
     'Limpa-vidros',
-    'Desinfetante ou água sanitária',
-    'Limpador de pisos',
-    'Álcool 70%',
-    'Lustra-móveis (se houver móveis ou portas de madeira)',
   ],
-  consumo: ['Panos de microfibra', 'Panos de chão e flanelas', 'Esponjas dupla face', 'Sacos de lixo reforçados'],
+  consumo: [
+    'Panos de microfibra',
+    'Panos de chão e flanelas',
+    'Esponja mágica',
+    'Esponjas dupla face',
+    'Sacos de lixo reforçados',
+  ],
   ferramenta: [
     'Vassouras de pelo macio, rodos e pá de lixo',
     'Baldes e borrifadores',
