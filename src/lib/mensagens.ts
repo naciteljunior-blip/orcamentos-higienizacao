@@ -5,7 +5,7 @@ import { hojeISO, numeroFormatado, somarDias, total } from './calc'
 import { TIPO_ROTULO } from './constantes'
 import { dataBR, dataHoraBR, reais } from './formato'
 import { textoPagamento } from './pagamento'
-import { pixDoOrcamento } from './pix'
+import { copiaEColaDoOrcamento, pixDoOrcamento } from './pix'
 
 /** Dias sem resposta depois de enviado para o orçamento aparecer em "Cobrar resposta". */
 export const DIAS_PARA_COBRAR = 3
@@ -40,7 +40,11 @@ export function mensagemOrcamento(o: Orcamento, config: Configuracoes): string {
   }
   linhas.push(`Válido até ${dataBR(somarDias(o.data_emissao, o.validade_dias))}.`)
   const pix = pixDoOrcamento(o, config)
-  if (pix?.chave.trim()) linhas.push('', `PIX: ${pix.chave}${pix.titular ? ` (${pix.titular})` : ''}${pix.banco ? ` - ${pix.banco}` : ''}`)
+  if (pix?.chave.trim()) {
+    linhas.push('', `PIX: ${pix.chave}${pix.titular ? ` (${pix.titular})` : ''}${pix.banco ? ` - ${pix.banco}` : ''}`)
+    const codigo = copiaEColaDoOrcamento(o, config)
+    if (codigo) linhas.push('', 'PIX copia e cola:', codigo)
+  }
   linhas.push('', 'Qualquer dúvida, é só chamar.')
   return linhas.join('\n') + assinatura(config)
 }

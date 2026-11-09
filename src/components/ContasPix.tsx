@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Campo } from './ui'
 import { novoId } from '../lib/formato'
 import { nomeContaPix } from '../lib/pix'
@@ -150,6 +150,58 @@ export function EscolhaPix({
         <button type="button" className="btn-secundario mt-2 w-full text-sm" onClick={() => setAberto(true)}>
           + Adicionar outra chave PIX
         </button>
+      )}
+    </div>
+  )
+}
+
+/** QR do PIX com o valor do orçamento, para mostrar ao cliente ou copiar o código. */
+export function QrPix({ codigo, rotulo }: { codigo: string; rotulo: string }) {
+  const [imagem, setImagem] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
+  const [mostrarCodigo, setMostrarCodigo] = useState(false)
+
+  useEffect(() => {
+    let ativo = true
+    void import('../lib/qr').then(({ qrDataUrl }) => qrDataUrl(codigo, 360)).then((url) => ativo && setImagem(url))
+    return () => {
+      ativo = false
+    }
+  }, [codigo])
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(codigo)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2500)
+    } catch {
+      // sem acesso à área de transferência (ex.: dentro do claude.ai): mostra o código para copiar à mão
+      setMostrarCodigo(true)
+    }
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg bg-white p-3 ring-1 ring-slate-200">
+      {imagem ? (
+        <img src={imagem} alt="QR Code do PIX" className="h-28 w-28 shrink-0" />
+      ) : (
+        <div className="h-28 w-28 shrink-0 animate-pulse rounded bg-slate-100" />
+      )}
+      <div className="min-w-0 flex-1 space-y-2">
+        <p className="text-sm font-semibold">QR do PIX</p>
+        <p className="text-xs text-slate-500">{rotulo} Também sai no PDF.</p>
+        <button type="button" className="btn-secundario w-full text-sm" onClick={() => void copiar()}>
+          {copiado ? 'Copiado ✓' : 'Copiar PIX copia e cola'}
+        </button>
+      </div>
+      {mostrarCodigo && (
+        <textarea
+          readOnly
+          aria-label="PIX copia e cola"
+          className="campo mt-2 basis-full font-mono text-xs"
+          value={codigo}
+          onFocus={(e) => e.currentTarget.select()}
+        />
       )}
     </div>
   )

@@ -14,6 +14,7 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **Google Agenda**: um toque cria o evento do serviço com endereço e telefone.
 - **Recibo de pagamento** em PDF, com o valor por extenso.
 - **Várias chaves PIX**: cadastre quantas quiser em Ajustes e escolha em cada orçamento em qual receber (dá para cadastrar uma nova ali mesmo).
+- **QR do PIX** com o valor do orçamento, na tela, no PDF e no resumo do WhatsApp (PIX copia e cola). No parcelado, o QR sai sem valor.
 - **Cliente já atendido**: ao digitar o nome, oferece trazer telefone e endereço do último orçamento.
 - **Backup e restauração** em arquivo `.json` (com as fotos dentro).
 - Login com e-mail e senha: só você acessa.

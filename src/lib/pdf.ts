@@ -6,7 +6,8 @@ import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorD
 import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
 import { textoPagamento } from './pagamento'
-import { pixDoOrcamento } from './pix'
+import { copiaEColaDoOrcamento, pixDoOrcamento } from './pix'
+import { qrDataUrl } from './qr'
 
 export { textoPagamento }
 
@@ -271,6 +272,37 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
       .filter(Boolean)
       .join('  |  ')
     if (conta) paragrafo(conta, 10)
+
+    const codigo = copiaEColaDoOrcamento(o, config)
+    if (codigo) {
+      const lado = 34
+      garantirEspaco(lado + 4)
+      doc.addImage(await qrDataUrl(codigo), 'PNG', MARGEM, y, lado, lado)
+      const x = MARGEM + lado + 5
+      const largura = UTIL - lado - 5
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(...COR_DESTAQUE)
+      doc.text('Pague com PIX pelo QR Code', x, y + 5)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(...COR_TEXTO)
+      const parcelado = o.pagamento_forma === 'parcelado' && o.pagamento_parcelas > 1
+      doc.text(
+        parcelado ? 'Abra o app do banco, escolha pagar com PIX e digite o valor da parcela.' : `Abra o app do banco e aponte a câmera. Valor: ${reais(valorTotal)}.`,
+        x,
+        y + 10.5,
+        { maxWidth: largura },
+      )
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(7.5)
+      doc.setTextColor(...COR_SUAVE)
+      doc.text('PIX copia e cola:', x, y + 17)
+      doc.setFont('courier', 'normal')
+      doc.setFontSize(6.5)
+      doc.text(doc.splitTextToSize(codigo, largura) as string[], x, y + 20.5)
+      y += lado + 8
+    }
   }
 
   if (o.condicoes.trim()) {

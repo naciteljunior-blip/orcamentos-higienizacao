@@ -5,8 +5,8 @@ import { api, nomeArquivo } from '../lib/api'
 import { useConfirmar } from '../components/Confirmacao'
 import Fotos from '../components/Fotos'
 import PosObraCampos from '../components/PosObraCampos'
-import { EscolhaPix } from '../components/ContasPix'
-import { pixDoOrcamento } from '../lib/pix'
+import { EscolhaPix, QrPix } from '../components/ContasPix'
+import { copiaEColaDoOrcamento, pixDoOrcamento } from '../lib/pix'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { buscarCep, formatarCep, montarEndereco, soDigitos } from '../lib/cep'
 import { hojeISO, itensComArea, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
@@ -387,6 +387,7 @@ export default function Editor() {
   }
 
   const whatsapp = linkWhatsApp(atual.cliente_telefone)
+  const codigoPix = r.total > 0 || atual.pagamento_forma === 'parcelado' ? copiaEColaDoOrcamento(atual, config) : null
   const conhecido = clientes.get(atual.cliente_nome.trim().toLowerCase())
   // só oferece num orçamento novo em que telefone e endereço ainda estão em branco
   const clienteConhecido = conhecido && !atual.id && !atual.cliente_telefone && !atual.endereco ? conhecido : null
@@ -762,6 +763,16 @@ export default function Editor() {
                 alterar('pix', conta)
               }}
             />
+            {codigoPix && (
+              <QrPix
+                codigo={codigoPix}
+                rotulo={
+                  atual.pagamento_forma === 'parcelado' && atual.pagamento_parcelas > 1
+                    ? 'Parcelado: o cliente digita o valor da parcela.'
+                    : `Já com o valor de ${reais(r.total)}.`
+                }
+              />
+            )}
 
             <dl className="space-y-1 rounded-lg bg-slate-50 p-3 text-sm ring-1 ring-slate-200">
               <div className="flex justify-between">
