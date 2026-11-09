@@ -61,6 +61,15 @@ export interface PosObra {
   materiais: Material[]
 }
 
+/** Uma chave PIX para receber. */
+export interface ContaPix {
+  id: string
+  chave: string
+  /** nome de quem recebe, para o cliente conferir */
+  titular: string
+  banco: string
+}
+
 export interface Custo {
   id: string
   tipo: CustoTipo
@@ -107,6 +116,8 @@ export interface Orcamento {
   pdf_fotos: boolean
   impressao: Impressao
   pos_obra: PosObra
+  /** chave PIX escolhida para este orçamento (cópia); null = a chave padrão dos ajustes */
+  pix: ContaPix | null
   condicoes: string
   observacoes: string
   criado_em: string
@@ -129,6 +140,9 @@ export interface Configuracoes {
   telefone: string
   email: string
   endereco: string
+  /** chaves PIX; a primeira é a padrão dos novos orçamentos */
+  pix_contas: ContaPix[]
+  /** versões antigas tinham uma chave só: lida uma vez e levada para pix_contas */
   pix: string
   /** nome de quem recebe o PIX, para o cliente conferir */
   pix_titular: string

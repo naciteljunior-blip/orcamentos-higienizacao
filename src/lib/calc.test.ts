@@ -48,6 +48,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     observacoes: '',
     criado_em: '',
     atualizado_em: '',
+    pix: null,
     ...parcial,
   }
 }

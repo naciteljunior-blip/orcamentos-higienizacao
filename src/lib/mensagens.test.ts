@@ -35,6 +35,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     observacoes: '',
     criado_em: '2026-10-01T10:00:00Z',
     atualizado_em: '2026-10-01T10:00:00Z',
+    pix: null,
     ...parcial,
   }
 }
@@ -64,7 +65,10 @@ describe('mensagens', () => {
     const texto = mensagemOrcamento(orc({ data_servico: '2026-11-03', hora_servico: '09:00' }), {
       ...CONFIG_PADRAO,
       empresa_nome: 'Lava Bem',
-      pix: 'chave-teste',
+      pix_contas: [
+        { id: 'a', chave: 'chave-teste', titular: '', banco: '' },
+        { id: 'b', chave: 'outra-chave', titular: 'Ana', banco: 'Inter' },
+      ],
     })
     expect(texto).toContain('Olá, Maria!')
     expect(texto).toContain('ORC-0007')
@@ -73,6 +77,13 @@ describe('mensagens', () => {
     expect(texto).toContain('Válido até 31/10/2026')
     expect(texto).toContain('PIX: chave-teste')
     expect(texto.endsWith('Lava Bem')).toBe(true)
+  })
+
+  it('usa a chave PIX escolhida no orçamento', () => {
+    const conta = { id: 'b', chave: 'outra-chave', titular: 'Ana', banco: 'Inter' }
+    const texto = mensagemOrcamento(orc({ pix: conta }), { ...CONFIG_PADRAO, pix_contas: [{ id: 'a', chave: 'padrao', titular: '', banco: '' }, conta] })
+    expect(texto).toContain('PIX: outra-chave (Ana) - Inter')
+    expect(texto).not.toContain('padrao')
   })
 
   it('leva o texto no link do WhatsApp', () => {

@@ -130,6 +130,7 @@ export const CONFIG_PADRAO: Configuracoes = {
   telefone: '',
   email: '',
   endereco: '',
+  pix_contas: [],
   pix: '',
   pix_titular: '',
   pix_banco: '',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Secao } from '../components/ui'
 import Materiais from '../components/Materiais'
+import { EditorContasPix } from '../components/ContasPix'
 import { useConfirmar } from '../components/Confirmacao'
 import { api } from '../lib/api'
 import { baixarBackup, embutirFotos, lerBackup, montarBackup } from '../lib/backup'
@@ -58,11 +59,17 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
   async function salvarForm() {
     setSalvando(true)
     try {
+      const contas = form.pix_contas.filter((c) => c.chave.trim())
       await salvar({
         ...form,
         catalogo: form.catalogo.filter((s) => s.descricao.trim()),
         checklist_pos_obra: form.checklist_pos_obra.filter((c) => c.descricao.trim()),
         materiais_pos_obra: form.materiais_pos_obra.filter((m) => m.descricao.trim()),
+        pix_contas: contas,
+        // as versões antigas liam uma chave só: fica igual à padrão
+        pix: contas[0]?.chave ?? '',
+        pix_titular: contas[0]?.titular ?? '',
+        pix_banco: contas[0]?.banco ?? '',
       })
       setAviso('Configurações salvas')
     } catch (e) {
@@ -113,7 +120,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
     )
   }
 
-  const texto = (campo: 'empresa_nome' | 'documento' | 'telefone' | 'email' | 'endereco' | 'pix' | 'pix_titular' | 'pix_banco') => ({
+  const texto = (campo: 'empresa_nome' | 'documento' | 'telefone' | 'email' | 'endereco') => ({
     value: form[campo],
     onChange: (e: ChangeEvent<HTMLInputElement>) => alterar(campo, e.target.value),
   })
@@ -141,16 +148,9 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
                 <input className="campo" type="email" inputMode="email" {...texto('email')} />
               </Campo>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Campo rotulo="Chave PIX">
-                <input className="campo" placeholder="Celular, CPF, CNPJ, e-mail…" {...texto('pix')} />
-              </Campo>
-              <Campo rotulo="Titular da conta">
-                <input className="campo" {...texto('pix_titular')} />
-              </Campo>
-              <Campo rotulo="Banco">
-                <input className="campo" {...texto('pix_banco')} />
-              </Campo>
+            <div>
+              <span className="rotulo">Chaves PIX</span>
+              <EditorContasPix contas={form.pix_contas} aoMudar={(contas) => alterar('pix_contas', contas)} />
             </div>
             <Campo rotulo="Endereço ou cidade (opcional)">
               <input className="campo" {...texto('endereco')} />

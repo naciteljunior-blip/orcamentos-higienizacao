@@ -45,7 +45,11 @@ const fotosEmbutidas = {
 
 /** Completa campos que faltem (ex.: configurações salvas por uma versão anterior). */
 export function completarConfig(dados: Partial<Configuracoes> | null | undefined): Configuracoes {
-  return { ...CONFIG_PADRAO, ...(dados ?? {}) }
+  const config = { ...CONFIG_PADRAO, ...(dados ?? {}) }
+  if (!config.pix_contas.length && config.pix.trim()) {
+    config.pix_contas = [{ id: 'principal', chave: config.pix.trim(), titular: config.pix_titular, banco: config.pix_banco }]
+  }
+  return config
 }
 
 /** Ajusta o que vem do banco: hora "14:30:00" → "14:30", números em texto → número. */
@@ -56,6 +60,7 @@ function normalizar(linha: Orcamento): Orcamento {
     cep: linha.cep ?? '',
     impressao: { ...IMPRESSAO_PADRAO, ...(linha.impressao ?? {}) },
     pos_obra: { ...POS_OBRA_PADRAO, ...(linha.pos_obra ?? {}) },
+    pix: linha.pix ?? null,
     hora_servico: linha.hora_servico ? linha.hora_servico.slice(0, 5) : null,
     desconto: Number(linha.desconto) || 0,
     itens: linha.itens ?? [],

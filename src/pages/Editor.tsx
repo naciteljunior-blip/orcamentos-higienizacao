@@ -5,6 +5,8 @@ import { api, nomeArquivo } from '../lib/api'
 import { useConfirmar } from '../components/Confirmacao'
 import Fotos from '../components/Fotos'
 import PosObraCampos from '../components/PosObraCampos'
+import { EscolhaPix } from '../components/ContasPix'
+import { pixDoOrcamento } from '../lib/pix'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { buscarCep, formatarCep, montarEndereco, soDigitos } from '../lib/cep'
 import { hojeISO, itensComArea, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
@@ -56,6 +58,7 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
       checklist: config.checklist_pos_obra.map((c) => ({ ...c, id: novoId() })),
       materiais: config.materiais_pos_obra.map((m) => ({ ...m, id: novoId() })),
     },
+    pix: null,
     condicoes: {
       higienizacao: config.condicoes_padrao,
       impressao3d: config.condicoes_padrao_3d,
@@ -88,7 +91,7 @@ export default function Editor() {
   const location = useLocation()
   const [params] = useSearchParams()
   const tipoNovo = TIPOS.find((t) => t === params.get('tipo')) ?? 'higienizacao'
-  const { config, carregada } = useConfig()
+  const { config, carregada, salvar: salvarConfig } = useConfig()
   const confirmar = useConfirmar()
 
   const [o, setO] = useState<OrcamentoEditavel | null>(null)
@@ -746,6 +749,19 @@ export default function Editor() {
                 )}
               </div>
             </div>
+
+            <EscolhaPix
+              contas={
+                // chave escolhida antes e depois apagada dos ajustes: continua aparecendo neste orçamento
+                atual.pix && !config.pix_contas.some((c) => c.id === atual.pix!.id) ? [...config.pix_contas, atual.pix] : config.pix_contas
+              }
+              selecionada={pixDoOrcamento(atual, config)?.id ?? null}
+              aoEscolher={(conta) => alterar('pix', conta)}
+              aoCadastrar={async (conta) => {
+                await salvarConfig({ ...config, pix_contas: [...config.pix_contas, conta] })
+                alterar('pix', conta)
+              }}
+            />
 
             <dl className="space-y-1 rounded-lg bg-slate-50 p-3 text-sm ring-1 ring-slate-200">
               <div className="flex justify-between">

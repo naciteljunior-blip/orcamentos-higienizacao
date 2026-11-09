@@ -6,6 +6,7 @@ import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorD
 import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
 import { textoPagamento } from './pagamento'
+import { pixDoOrcamento } from './pix'
 
 export { textoPagamento }
 
@@ -263,9 +264,10 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
   // ---- Pagamento ----
   titulo('Forma de pagamento')
   paragrafo(textoPagamento(o, valorTotal), 10)
-  if (config.pix) {
-    paragrafo(`Chave PIX: ${config.pix}`, 10)
-    const conta = [config.pix_titular && `Titular: ${config.pix_titular}`, config.pix_banco && `Banco: ${config.pix_banco}`]
+  const pix = pixDoOrcamento(o, config)
+  if (pix?.chave.trim()) {
+    paragrafo(`Chave PIX: ${pix.chave}`, 10)
+    const conta = [pix.titular && `Titular: ${pix.titular}`, pix.banco && `Banco: ${pix.banco}`]
       .filter(Boolean)
       .join('  |  ')
     if (conta) paragrafo(conta, 10)

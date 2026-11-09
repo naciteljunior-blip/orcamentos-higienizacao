@@ -13,6 +13,7 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **Mensagens prontas no WhatsApp**: resumo do orçamento (total, validade, PIX), cobrar resposta, confirmar agendamento e agradecer/pedir indicação.
 - **Google Agenda**: um toque cria o evento do serviço com endereço e telefone.
 - **Recibo de pagamento** em PDF, com o valor por extenso.
+- **Várias chaves PIX**: cadastre quantas quiser em Ajustes e escolha em cada orçamento em qual receber (dá para cadastrar uma nova ali mesmo).
 - **Cliente já atendido**: ao digitar o nome, oferece trazer telefone e endereço do último orçamento.
 - **Backup e restauração** em arquivo `.json` (com as fotos dentro).
 - Login com e-mail e senha: só você acessa.
@@ -28,7 +29,7 @@ Em **Ajustes** ficam o valor padrão do m², as listas padrão e as condições 
 Ao tocar em **Novo orçamento**, escolha **Higienização** ou **Impressão 3D**. O orçamento de impressão 3D troca "Local e data" por:
 o que será feito, unidades, prazo (dias após a aprovação), filamento total (kg) e se tem tag NFC. Tudo isso sai no PDF.
 Em **Ajustes**, informe quanto paga no kg do filamento para lançar o custo interno com um toque. O resumo mensal pode ser filtrado por tipo.
-Quem já usa o Supabase precisa rodar `supabase/schema.sql` de novo (não apaga dados).
+Quem já usa o Supabase precisa rodar `supabase/schema.sql` de novo a cada atualização do banco (não apaga dados); a última acrescentou a chave PIX por orçamento.
 
 ## Como os números são calculados
 
