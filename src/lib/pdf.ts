@@ -36,6 +36,60 @@ function formatoImagem(dataUrl: string): 'PNG' | 'JPEG' | null {
   return null
 }
 
+/**
+ * Logo e dados da empresa no alto da página. Devolve a altura ocupada.
+ * Logo que já traz o nome sai maior e o nome não é repetido em texto.
+ */
+function cabecalhoEmpresa(doc: jsPDF, config: Configuracoes, y: number, nomePadrao: string): number {
+  const linhasEmpresa = [
+    config.documento && `CNPJ/CPF: ${config.documento}`,
+    [config.telefone, config.email].filter(Boolean).join('  |  '),
+    config.endereco,
+  ].filter(Boolean) as string[]
+  const formato = config.logo ? formatoImagem(config.logo) : null
+  let props: { width: number; height: number } | null = null
+  if (config.logo && formato) {
+    try {
+      props = doc.getImageProperties(config.logo)
+    } catch {
+      // logo inválido: segue sem ele
+    }
+  }
+
+  const detalhes = (x: number, topo: number) => {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8.5)
+    doc.setTextColor(...COR_SUAVE)
+    linhasEmpresa.forEach((linha, i) => doc.text(linha, x, topo + i * 4))
+  }
+
+  if (props && formato && config.logo_com_nome) {
+    // logo com o nome: até 75 × 24 mm, dados da empresa embaixo
+    let largura = 75
+    let altura = (props.height / props.width) * largura
+    if (altura > 24) {
+      altura = 24
+      largura = (props.width / props.height) * altura
+    }
+    doc.addImage(config.logo, formato, MARGEM, y - 2, largura, altura)
+    detalhes(MARGEM, y + altura + 2)
+    return altura + linhasEmpresa.length * 4 + 6
+  }
+
+  let xTexto = MARGEM
+  if (props && formato) {
+    const larguraLogo = Math.min(40, (props.width / props.height) * 22)
+    doc.addImage(config.logo, formato, MARGEM, y, larguraLogo, (props.height / props.width) * larguraLogo)
+    xTexto = MARGEM + larguraLogo + 5
+  }
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.setTextColor(...COR_TEXTO)
+  doc.text(config.empresa_nome || nomePadrao, xTexto, y + 5)
+  detalhes(xTexto, y + 10)
+  return 12 + linhasEmpresa.length * 4
+}
+
 export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (ref: string) => string): Promise<Blob> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   let y = MARGEM
@@ -96,33 +150,7 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
   }
 
   // ---- Cabeçalho: logo + dados da empresa | número e datas ----
-  let xTexto = MARGEM
-  const formato = config.logo ? formatoImagem(config.logo) : null
-  if (config.logo && formato) {
-    try {
-      const props = doc.getImageProperties(config.logo)
-      const alturaLogo = 22
-      const larguraLogo = Math.min(40, (props.width / props.height) * alturaLogo)
-      doc.addImage(config.logo, formato, MARGEM, y, larguraLogo, (props.height / props.width) * larguraLogo)
-      xTexto = MARGEM + larguraLogo + 5
-    } catch {
-      // logo inválido: segue sem ele
-    }
-  }
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.setTextColor(...COR_TEXTO)
-  doc.text(config.empresa_nome || 'Orçamento', xTexto, y + 5)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.5)
-  doc.setTextColor(...COR_SUAVE)
-  const linhasEmpresa = [
-    config.documento && `CNPJ/CPF: ${config.documento}`,
-    [config.telefone, config.email].filter(Boolean).join('  |  '),
-    config.endereco,
-  ].filter(Boolean) as string[]
-  linhasEmpresa.forEach((linha, i) => doc.text(linha, xTexto, y + 10 + i * 4))
+  const alturaEmpresa = cabecalhoEmpresa(doc, config, y, 'Orçamento')
 
   const direita = LARGURA - MARGEM
   doc.setFont('helvetica', 'bold')
@@ -138,7 +166,7 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
   doc.text(`Emissão: ${dataBR(o.data_emissao)}`, direita, y + 13, { align: 'right' })
   doc.text(`Válido até: ${dataBR(somarDias(o.data_emissao, o.validade_dias))}`, direita, y + 17.5, { align: 'right' })
 
-  y += Math.max(26, 12 + linhasEmpresa.length * 4)
+  y += Math.max(26, alturaEmpresa)
 
   // ---- Cliente e local ----
   titulo('Cliente')
@@ -445,32 +473,7 @@ export async function gerarRecibo(o: Orcamento, config: Configuracoes, dataRecib
   let y = MARGEM
 
   // ---- Cabeçalho ----
-  let xTexto = MARGEM
-  const formato = config.logo ? formatoImagem(config.logo) : null
-  if (config.logo && formato) {
-    try {
-      const props = doc.getImageProperties(config.logo)
-      const larguraLogo = Math.min(34, (props.width / props.height) * 18)
-      doc.addImage(config.logo, formato, MARGEM, y, larguraLogo, (props.height / props.width) * larguraLogo)
-      xTexto = MARGEM + larguraLogo + 5
-    } catch {
-      // logo inválido: segue sem ele
-    }
-  }
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
-  doc.setTextColor(...COR_TEXTO)
-  doc.text(config.empresa_nome || 'Recibo', xTexto, y + 5)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8.5)
-  doc.setTextColor(...COR_SUAVE)
-  const linhasEmpresa = [
-    config.documento && `CNPJ/CPF: ${config.documento}`,
-    [config.telefone, config.email].filter(Boolean).join('  |  '),
-    config.endereco,
-  ].filter(Boolean) as string[]
-  linhasEmpresa.forEach((linha, i) => doc.text(linha, xTexto, y + 10 + i * 4))
-  y += Math.max(24, 12 + linhasEmpresa.length * 4)
+  y += Math.max(24, cabecalhoEmpresa(doc, config, y, 'Recibo'))
 
   // ---- Título e valor ----
   const valor = total(o)

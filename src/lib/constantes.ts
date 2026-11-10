@@ -190,6 +190,7 @@ export const CONFIG_PADRAO: Configuracoes = {
   pix_titular: '',
   pix_banco: '',
   logo: '',
+  logo_com_nome: false,
   condicoes_padrao:
     'Pagamento via PIX, dinheiro ou cartão.\n' +
     'O serviço é agendado após a aprovação do orçamento.\n' +

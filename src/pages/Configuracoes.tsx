@@ -9,7 +9,7 @@ import { useConfig } from '../lib/configContexto'
 import { novoId, reais } from '../lib/formato'
 import type { Configuracoes as Config, ItemChecklist } from '../types'
 
-/** Reduz a imagem do logo (máx. 400 px) para não pesar no banco nem no PDF. */
+/** Reduz a imagem do logo (máx. 800 px) para não pesar no banco nem no PDF. */
 function lerLogo(arquivo: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const leitor = new FileReader()
@@ -18,7 +18,7 @@ function lerLogo(arquivo: File): Promise<string> {
       const img = new Image()
       img.onerror = () => reject(new Error('Formato de imagem não suportado.'))
       img.onload = () => {
-        const escala = Math.min(1, 400 / Math.max(img.width, img.height))
+        const escala = Math.min(1, 800 / Math.max(img.width, img.height))
         const canvas = document.createElement('canvas')
         canvas.width = Math.round(img.width * escala)
         canvas.height = Math.round(img.height * escala)
@@ -161,7 +161,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
               <span className="rotulo">Logo (opcional)</span>
               <div className="flex items-center gap-3">
                 {form.logo ? (
-                  <img src={form.logo} alt="Logo atual" className="h-16 w-16 rounded-lg bg-white object-contain ring-1 ring-slate-200" />
+                  <img src={form.logo} alt="Logo atual" className="h-16 max-w-48 rounded-lg bg-white object-contain p-1 ring-1 ring-slate-200" />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-50 text-xs text-slate-400 ring-1 ring-slate-200">
                     Sem logo
@@ -191,6 +191,17 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
                   </button>
                 )}
               </div>
+              {form.logo && (
+                <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-700"
+                    checked={form.logo_com_nome}
+                    onChange={(e) => alterar('logo_com_nome', e.target.checked)}
+                  />
+                  O logo já tem o nome da empresa (sai maior no PDF, sem repetir o nome)
+                </label>
+              )}
             </div>
           </div>
         </Secao>

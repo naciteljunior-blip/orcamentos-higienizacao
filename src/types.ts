@@ -171,6 +171,8 @@ export interface Configuracoes {
   pix_banco: string
   /** imagem em data URL (já reduzida) */
   logo: string
+  /** o logo já traz o nome da empresa: no PDF sai maior e o nome não é repetido */
+  logo_com_nome: boolean
   condicoes_padrao: string
   condicoes_padrao_3d: string
   /** custo do filamento por kg, para lançar o custo interno */
