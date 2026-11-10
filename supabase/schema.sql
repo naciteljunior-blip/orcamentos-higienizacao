@@ -43,6 +43,7 @@ create table if not exists public.orcamentos (
   pdf_fotos boolean not null default false,
   impressao jsonb not null default '{}'::jsonb,
   pos_obra jsonb not null default '{}'::jsonb,
+  limpeza jsonb not null default '{}'::jsonb,
   pix jsonb,
   condicoes text not null default '',
   observacoes text not null default '',
@@ -63,10 +64,11 @@ alter table public.orcamentos add column if not exists impressao jsonb not null 
 alter table public.orcamentos add column if not exists pos_obra jsonb not null default '{}'::jsonb;
 alter table public.orcamentos add column if not exists cep text not null default '';
 alter table public.orcamentos add column if not exists pix jsonb;
+alter table public.orcamentos add column if not exists limpeza jsonb not null default '{}'::jsonb;
 -- tipos de orçamento aceitos (recriada a cada versão para incluir os tipos novos)
 alter table public.orcamentos drop constraint if exists orcamentos_tipo_check;
 alter table public.orcamentos add constraint orcamentos_tipo_check
-  check (tipo in ('higienizacao', 'impressao3d', 'pos_obra'));
+  check (tipo in ('higienizacao', 'limpeza', 'impressao3d', 'pos_obra'));
 
 create index if not exists orcamentos_user_data_idx on public.orcamentos (user_id, data_servico);
 
@@ -152,7 +154,7 @@ begin
     id, user_id, numero, tipo, status, cliente_nome, cliente_telefone, cliente_email,
     local_tipo, cep, endereco, complemento, data_servico, hora_servico, data_emissao,
     validade_dias, itens, desconto_tipo, desconto, custos, pagamento_forma, pagamento_parcelas,
-    fotos, pdf_fotos, impressao, pos_obra, pix, condicoes, observacoes, criado_em, atualizado_em
+    fotos, pdf_fotos, impressao, pos_obra, limpeza, pix, condicoes, observacoes, criado_em, atualizado_em
   )
   select
     coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.tipo, 'higienizacao'), coalesce(o.status, 'rascunho'),
@@ -163,7 +165,7 @@ begin
     coalesce(o.desconto_tipo, 'valor'), coalesce(o.desconto, 0), coalesce(o.custos, '[]'::jsonb),
     coalesce(o.pagamento_forma, 'a_vista'), coalesce(o.pagamento_parcelas, 1),
     coalesce(o.fotos, '[]'::jsonb), coalesce(o.pdf_fotos, false),
-    coalesce(o.impressao, '{}'::jsonb), coalesce(o.pos_obra, '{}'::jsonb), o.pix,
+    coalesce(o.impressao, '{}'::jsonb), coalesce(o.pos_obra, '{}'::jsonb), coalesce(o.limpeza, '{}'::jsonb), o.pix,
     coalesce(o.condicoes, ''), coalesce(o.observacoes, ''),
     coalesce(o.criado_em, now()), coalesce(o.atualizado_em, now())
   from jsonb_populate_recordset(null::orcamentos, coalesce(backup -> 'orcamentos', '[]'::jsonb)) as o;

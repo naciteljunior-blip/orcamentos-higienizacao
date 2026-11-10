@@ -19,6 +19,12 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **Backup e restauração** em arquivo `.json` (com as fotos dentro).
 - Login com e-mail e senha: só você acessa.
 
+## Limpeza
+
+Em **Novo orçamento → Limpeza** (limpeza de apartamento ou casa): tipo de limpeza (padrão, pesada/faxina ou mudança), frequência
+(avulsa, semanal, quinzenal ou mensal; os valores são por limpeza), cômodos, equipe e duração em horas, lista do que está
+**incluso / não incluso** e os **produtos e equipamentos** usados, tudo no PDF. As listas e as condições padrão ficam em **Ajustes → Limpeza**.
+
 ## Pós-obra
 
 Em **Novo orçamento → Pós-obra**: área (m²) × valor do m² vira automaticamente a primeira linha dos serviços (dá para somar extras),

@@ -1,15 +1,30 @@
-import type { CategoriaMaterial, Configuracoes, CustoTipo, Impressao, LocalTipo, NivelSujeira, PosObra, Status, TipoOrcamento } from '../types'
+import type {
+  CategoriaMaterial,
+  Configuracoes,
+  CustoTipo,
+  Frequencia,
+  Impressao,
+  Limpeza,
+  LocalTipo,
+  ModalidadeLimpeza,
+  NivelSujeira,
+  PosObra,
+  Status,
+  TipoOrcamento,
+} from '../types'
 
-export const TIPOS: TipoOrcamento[] = ['higienizacao', 'pos_obra', 'impressao3d']
+export const TIPOS: TipoOrcamento[] = ['higienizacao', 'limpeza', 'pos_obra', 'impressao3d']
 
 export const TIPO_ROTULO: Record<TipoOrcamento, string> = {
   higienizacao: 'Higienização',
+  limpeza: 'Limpeza',
   pos_obra: 'Pós-obra',
   impressao3d: 'Impressão 3D',
 }
 
 export const TIPO_COR: Record<TipoOrcamento, string> = {
   higienizacao: 'bg-teal-50 text-teal-800 ring-teal-200',
+  limpeza: 'bg-sky-50 text-sky-800 ring-sky-200',
   pos_obra: 'bg-orange-50 text-orange-800 ring-orange-200',
   impressao3d: 'bg-violet-50 text-violet-800 ring-violet-200',
 }
@@ -71,6 +86,46 @@ const MATERIAIS_PADRAO: Record<CategoriaMaterial, string[]> = {
     'Espanador ou extensor para pontos altos',
     'Raspador de vidro (para pequenos respingos de tinta ou massa)',
   ],
+}
+
+/** Campos de cômodos usados no pós-obra e na limpeza. */
+export const COMODOS: { campo: 'quartos' | 'banheiros' | 'salas' | 'cozinhas' | 'areas_externas'; rotulo: string }[] = [
+  { campo: 'quartos', rotulo: 'Quartos' },
+  { campo: 'banheiros', rotulo: 'Banheiros' },
+  { campo: 'salas', rotulo: 'Salas' },
+  { campo: 'cozinhas', rotulo: 'Cozinhas' },
+  { campo: 'areas_externas', rotulo: 'Externas' },
+]
+
+export const MODALIDADES: ModalidadeLimpeza[] = ['padrao', 'pesada', 'mudanca']
+
+export const MODALIDADE_ROTULO: Record<ModalidadeLimpeza, string> = {
+  padrao: 'Padrão',
+  pesada: 'Pesada / faxina',
+  mudanca: 'Mudança',
+}
+
+export const FREQUENCIAS: Frequencia[] = ['avulsa', 'semanal', 'quinzenal', 'mensal']
+
+export const FREQUENCIA_ROTULO: Record<Frequencia, string> = {
+  avulsa: 'Avulsa',
+  semanal: 'Semanal',
+  quinzenal: 'Quinzenal',
+  mensal: 'Mensal',
+}
+
+export const LIMPEZA_PADRAO: Limpeza = {
+  modalidade: 'padrao',
+  frequencia: 'avulsa',
+  quartos: 0,
+  banheiros: 0,
+  salas: 0,
+  cozinhas: 0,
+  areas_externas: 0,
+  equipe: 0,
+  horas: 0,
+  checklist: [],
+  materiais: [],
 }
 
 export const IMPRESSAO_PADRAO: Impressao = { descricao: '', unidades: 1, prazo_dias: 7, filamento_kg: 0, nfc: false }
@@ -172,6 +227,37 @@ export const CONFIG_PADRAO: Configuracoes = {
   ],
   materiais_pos_obra: CATEGORIAS_MATERIAL.flatMap((categoria) =>
     MATERIAIS_PADRAO[categoria].map((descricao, i) => ({ id: `${categoria}-${i + 1}`, categoria, descricao })),
+  ),
+  condicoes_padrao_limpeza:
+    'Pagamento via PIX, dinheiro ou cartão.\n' +
+    'O serviço é agendado após a aprovação do orçamento.\n' +
+    'O imóvel deve estar com água e energia elétrica funcionando.\n' +
+    'Objetos de valor e documentos devem ser guardados pelo cliente antes da limpeza.',
+  checklist_limpeza: [
+    ...[
+      'Varrer e passar pano em todos os pisos',
+      'Tirar o pó de móveis, prateleiras e eletrodomésticos',
+      'Limpeza completa dos banheiros (vaso, pia, box e espelhos)',
+      'Cozinha: pia, fogão por fora, bancadas e azulejos',
+      'Geladeira e micro-ondas por fora',
+      'Vidros e janelas pelo lado de dentro',
+      'Portas, maçanetas e interruptores',
+      'Arrumar as camas',
+      'Recolher e trocar o lixo',
+    ].map((descricao, i) => ({ id: `limp-inc-${i + 1}`, descricao, incluso: true })),
+    ...[
+      'Dentro de armários, geladeira e forno (orçado à parte)',
+      'Lavar e passar roupas',
+      'Vidros externos em altura, sem acesso seguro',
+      'Higienização de estofados e tapetes (orçada à parte)',
+    ].map((descricao, i) => ({ id: `limp-nao-${i + 1}`, descricao, incluso: false })),
+  ],
+  materiais_limpeza: CATEGORIAS_MATERIAL.flatMap((categoria) =>
+    ({
+      produto: ['Detergente neutro', 'Limpador multiuso', 'Desinfetante', 'Limpa-vidros', 'Limpador de pisos'],
+      consumo: ['Panos de microfibra', 'Panos de chão e flanelas', 'Esponjas dupla face', 'Sacos de lixo'],
+      ferramenta: ['Vassoura, rodo e pá de lixo', 'Balde e borrifadores', 'Mop', 'Aspirador de pó'],
+    })[categoria].map((descricao, i) => ({ id: `limp-${categoria}-${i + 1}`, categoria, descricao })),
   ),
   validade_padrao: 30,
   catalogo: [

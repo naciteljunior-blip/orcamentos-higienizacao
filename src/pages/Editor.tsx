@@ -5,6 +5,7 @@ import { api, nomeArquivo } from '../lib/api'
 import { useConfirmar } from '../components/Confirmacao'
 import Fotos from '../components/Fotos'
 import PosObraCampos from '../components/PosObraCampos'
+import LimpezaCampos from '../components/LimpezaCampos'
 import { EscolhaPix, QrPix } from '../components/ContasPix'
 import { copiaEColaDoOrcamento, pixDoOrcamento } from '../lib/pix'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
@@ -15,6 +16,7 @@ import {
   CUSTO_ROTULO,
   CUSTO_TIPOS,
   IMPRESSAO_PADRAO,
+  LIMPEZA_PADRAO,
   LOCAL_ROTULO,
   LOCAL_TIPOS,
   POS_OBRA_PADRAO,
@@ -26,7 +28,7 @@ import {
 } from '../lib/constantes'
 import { dataBR, decimal, linkWhatsApp, novoId, porcentagem, reais } from '../lib/formato'
 import { linkGoogleAgenda, mensagemAgradecimento, mensagemCobranca, mensagemConfirmacao, mensagemOrcamento } from '../lib/mensagens'
-import type { Configuracoes, Custo, Impressao, Item, Orcamento, OrcamentoEditavel, OrcamentoNovo, PosObra, TipoOrcamento } from '../types'
+import type { Configuracoes, Custo, Impressao, Item, Limpeza, Orcamento, OrcamentoEditavel, OrcamentoNovo, PosObra, TipoOrcamento } from '../types'
 
 function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): OrcamentoNovo {
   return {
@@ -58,10 +60,16 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
       checklist: config.checklist_pos_obra.map((c) => ({ ...c, id: novoId() })),
       materiais: config.materiais_pos_obra.map((m) => ({ ...m, id: novoId() })),
     },
+    limpeza: {
+      ...LIMPEZA_PADRAO,
+      checklist: config.checklist_limpeza.map((c) => ({ ...c, id: novoId() })),
+      materiais: config.materiais_limpeza.map((m) => ({ ...m, id: novoId() })),
+    },
     pix: null,
     condicoes: {
       higienizacao: config.condicoes_padrao,
       impressao3d: config.condicoes_padrao_3d,
+      limpeza: config.condicoes_padrao_limpeza,
       pos_obra: config.condicoes_padrao_pos_obra,
     }[tipo],
     observacoes: '',
@@ -211,6 +219,9 @@ export default function Editor() {
           : a.itens
       return { ...a, itens, impressao: { ...a.impressao, ...mudanca } }
     })
+  }
+  function alterarLimpeza(mudanca: Partial<Limpeza>) {
+    setO((a) => a && { ...a, limpeza: { ...a.limpeza, ...mudanca } })
   }
   function alterarPosObra(mudanca: Partial<PosObra>) {
     setO((a) => {
@@ -407,6 +418,7 @@ export default function Editor() {
   const agenda = salvoAtual && atual.tipo !== 'impressao3d' ? linkGoogleAgenda(salvoAtual, config) : null
   const e3d = atual.tipo === 'impressao3d'
   const ePos = atual.tipo === 'pos_obra'
+  const eLimpeza = atual.tipo === 'limpeza'
   const imp = atual.impressao
   const custoFilamento = e3d ? Math.round(imp.filamento_kg * config.filamento_preco_kg * 100) / 100 : 0
 
@@ -619,6 +631,12 @@ export default function Editor() {
           </Secao>
         )}
 
+        {eLimpeza && (
+          <Secao titulo="Limpeza">
+            <LimpezaCampos dados={atual.limpeza} aoMudar={alterarLimpeza} />
+          </Secao>
+        )}
+
         {ePos && (
           <Secao titulo="Limpeza pós-obra">
             <PosObraCampos dados={atual.pos_obra} aoMudar={alterarPosObra} />
@@ -632,7 +650,7 @@ export default function Editor() {
                 <div className="flex gap-2">
                   <input
                     className="campo"
-                    placeholder={e3d ? 'Ex.: Impressão das peças' : ePos ? 'Ex.: Limpeza de vidros externos' : 'Descrição do serviço'}
+                    placeholder={e3d ? 'Ex.: Impressão das peças' : ePos ? 'Ex.: Limpeza de vidros externos' : eLimpeza ? 'Ex.: Limpeza do apartamento' : 'Descrição do serviço'}
                     aria-label={`Descrição do item ${indice + 1}`}
                     value={item.descricao}
                     onChange={(e) => alterarItem(item.id, { descricao: e.target.value })}
@@ -828,7 +846,9 @@ export default function Editor() {
                     ? 'Ex.: cor do filamento, acabamento, arquivo enviado pelo cliente'
                     : ePos
                       ? 'Ex.: muita tinta nos vidros da sala; prédio só libera serviço até 17h'
-                      : 'Ex.: sofá com mancha de café no assento'
+                      : eLimpeza
+                        ? 'Ex.: tem cachorro; chave com o porteiro'
+                        : 'Ex.: sofá com mancha de café no assento'
                 }
                 value={atual.observacoes}
                 onChange={(e) => alterar('observacoes', e.target.value)}

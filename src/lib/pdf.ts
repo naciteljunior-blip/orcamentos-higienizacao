@@ -1,7 +1,15 @@
 import { jsPDF } from 'jspdf'
 import { autoTable } from 'jspdf-autotable'
 import type { Configuracoes, Orcamento } from '../types'
-import { CATEGORIA_MATERIAL_ROTULO, CATEGORIAS_MATERIAL, LOCAL_ROTULO, NIVEL_ROTULO, TIPO_ROTULO } from './constantes'
+import {
+  CATEGORIA_MATERIAL_ROTULO,
+  CATEGORIAS_MATERIAL,
+  FREQUENCIA_ROTULO,
+  LOCAL_ROTULO,
+  MODALIDADE_ROTULO,
+  NIVEL_ROTULO,
+  TIPO_ROTULO,
+} from './constantes'
 import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto } from './calc'
 import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
@@ -162,25 +170,10 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
     ])
   }
 
-  if (o.tipo === 'pos_obra') {
-    const p = o.pos_obra
-    const plural = (n: number, um: string, varios: string) => (n ? `${n} ${n === 1 ? um : varios}` : '')
-    const comodos = [
-      plural(p.quartos, 'quarto', 'quartos'),
-      plural(p.banheiros, 'banheiro', 'banheiros'),
-      plural(p.salas, 'sala', 'salas'),
-      plural(p.cozinhas, 'cozinha', 'cozinhas'),
-      plural(p.areas_externas, 'área externa', 'áreas externas'),
-    ].filter(Boolean)
-    titulo('Limpeza pós-obra')
-    pares([
-      ['Área', p.area_m2 ? `${decimal(p.area_m2)} m²` : ''],
-      ['Nível de sujeira', NIVEL_ROTULO[p.nivel]],
-      ['Cômodos', comodos.join(', ')],
-      ['Equipe e prazo', [plural(p.equipe, 'profissional', 'profissionais'), plural(p.dias, 'dia', 'dias')].filter(Boolean).join(' · ')],
-    ])
-    const inclusos = p.checklist.filter((c) => c.incluso && c.descricao.trim())
-    const naoInclusos = p.checklist.filter((c) => !c.incluso && c.descricao.trim())
+  /** Tabela "O que está incluso / Não incluso". */
+  const tabelaChecklist = (checklist: Orcamento['pos_obra']['checklist']) => {
+    const inclusos = checklist.filter((c) => c.incluso && c.descricao.trim())
+    const naoInclusos = checklist.filter((c) => !c.incluso && c.descricao.trim())
     if (inclusos.length || naoInclusos.length) {
       garantirEspaco(20)
       const linhas = Math.max(inclusos.length, naoInclusos.length)
@@ -203,7 +196,11 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5
     }
 
-    const grupos = CATEGORIAS_MATERIAL.map((c) => p.materiais.filter((m) => m.categoria === c && m.descricao.trim()))
+  }
+
+  /** Produtos e equipamentos marcados, em colunas por categoria. */
+  const tabelaMateriais = (materiais: Orcamento['pos_obra']['materiais']) => {
+    const grupos = CATEGORIAS_MATERIAL.map((c) => materiais.filter((m) => m.categoria === c && m.descricao.trim()))
     if (grupos.some((g) => g.length)) {
       titulo('Produtos e equipamentos utilizados')
       const colunas = CATEGORIAS_MATERIAL.filter((_, i) => grupos[i].length)
@@ -222,6 +219,49 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
       })
       y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 5
     }
+  }
+
+  const plural = (n: number, um: string, varios: string) => (n ? `${n} ${n === 1 ? um : varios}` : '')
+  const comodosTexto = (c: Pick<Orcamento['pos_obra'], 'quartos' | 'banheiros' | 'salas' | 'cozinhas' | 'areas_externas'>) =>
+    [
+      plural(c.quartos, 'quarto', 'quartos'),
+      plural(c.banheiros, 'banheiro', 'banheiros'),
+      plural(c.salas, 'sala', 'salas'),
+      plural(c.cozinhas, 'cozinha', 'cozinhas'),
+      plural(c.areas_externas, 'área externa', 'áreas externas'),
+    ]
+      .filter(Boolean)
+      .join(', ')
+
+  if (o.tipo === 'pos_obra') {
+    const p = o.pos_obra
+    titulo('Limpeza pós-obra')
+    pares([
+      ['Área', p.area_m2 ? `${decimal(p.area_m2)} m²` : ''],
+      ['Nível de sujeira', NIVEL_ROTULO[p.nivel]],
+      ['Cômodos', comodosTexto(p)],
+      ['Equipe e prazo', [plural(p.equipe, 'profissional', 'profissionais'), plural(p.dias, 'dia', 'dias')].filter(Boolean).join(' · ')],
+    ])
+    tabelaChecklist(p.checklist)
+    tabelaMateriais(p.materiais)
+  }
+
+  if (o.tipo === 'limpeza') {
+    const l = o.limpeza
+    titulo('Limpeza')
+    pares([
+      ['Tipo de limpeza', MODALIDADE_ROTULO[l.modalidade]],
+      ['Frequência', l.frequencia === 'avulsa' ? 'Avulsa (uma vez)' : `${FREQUENCIA_ROTULO[l.frequencia]} (valores por limpeza)`],
+      ['Cômodos', comodosTexto(l)],
+      [
+        'Equipe e duração',
+        [plural(l.equipe, 'profissional', 'profissionais'), l.horas ? `cerca de ${decimal(l.horas)} ${l.horas === 1 ? 'hora' : 'horas'}` : '']
+          .filter(Boolean)
+          .join(' · '),
+      ],
+    ])
+    tabelaChecklist(l.checklist)
+    tabelaMateriais(l.materiais)
   }
 
   // ---- Serviços ----

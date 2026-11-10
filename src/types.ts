@@ -3,7 +3,9 @@ export type LocalTipo = 'apartamento' | 'predio' | 'casa' | 'comercio'
 export type CustoTipo = 'produto' | 'maquina' | 'aluguel' | 'ajudante' | 'transporte' | 'filamento' | 'outros'
 export type DescontoTipo = 'valor' | 'percentual'
 export type PagamentoForma = 'a_vista' | 'parcelado'
-export type TipoOrcamento = 'higienizacao' | 'impressao3d' | 'pos_obra'
+export type TipoOrcamento = 'higienizacao' | 'limpeza' | 'impressao3d' | 'pos_obra'
+export type ModalidadeLimpeza = 'padrao' | 'pesada' | 'mudanca'
+export type Frequencia = 'avulsa' | 'semanal' | 'quinzenal' | 'mensal'
 export type NivelSujeira = 'leve' | 'media' | 'pesada'
 
 /** Dados próprios de um orçamento de impressão 3D. */
@@ -70,6 +72,25 @@ export interface ContaPix {
   banco: string
 }
 
+/** Dados próprios de um orçamento de limpeza de apartamento / casa. */
+export interface Limpeza {
+  modalidade: ModalidadeLimpeza
+  frequencia: Frequencia
+  quartos: number
+  banheiros: number
+  salas: number
+  cozinhas: number
+  areas_externas: number
+  /** pessoas na equipe */
+  equipe: number
+  /** duração estimada, em horas */
+  horas: number
+  /** o que está e o que não está incluso (sai no PDF) */
+  checklist: ItemChecklist[]
+  /** produtos, materiais e equipamentos que serão usados */
+  materiais: Material[]
+}
+
 export interface Custo {
   id: string
   tipo: CustoTipo
@@ -116,6 +137,7 @@ export interface Orcamento {
   pdf_fotos: boolean
   impressao: Impressao
   pos_obra: PosObra
+  limpeza: Limpeza
   /** chave PIX escolhida para este orçamento (cópia); null = a chave padrão dos ajustes */
   pix: ContaPix | null
   condicoes: string
@@ -160,6 +182,9 @@ export interface Configuracoes {
   checklist_pos_obra: ItemChecklist[]
   /** lista padrão de produtos e equipamentos do pós-obra */
   materiais_pos_obra: Material[]
+  condicoes_padrao_limpeza: string
+  checklist_limpeza: ItemChecklist[]
+  materiais_limpeza: Material[]
   validade_padrao: number
   catalogo: ServicoCatalogo[]
 }

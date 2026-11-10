@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Backup, Configuracoes, Orcamento, OrcamentoEditavel } from '../types'
-import { CONFIG_PADRAO, IMPRESSAO_PADRAO, POS_OBRA_PADRAO } from './constantes'
+import { CONFIG_PADRAO, IMPRESSAO_PADRAO, LIMPEZA_PADRAO, POS_OBRA_PADRAO } from './constantes'
 import { hojeISO, numeroFormatado } from './calc'
 import { novoId } from './formato'
 import { blobParaDataUrl, comprimirImagem } from './imagem'
@@ -60,6 +60,7 @@ function normalizar(linha: Orcamento): Orcamento {
     cep: linha.cep ?? '',
     impressao: { ...IMPRESSAO_PADRAO, ...(linha.impressao ?? {}) },
     pos_obra: { ...POS_OBRA_PADRAO, ...(linha.pos_obra ?? {}) },
+    limpeza: { ...LIMPEZA_PADRAO, ...(linha.limpeza ?? {}) },
     pix: linha.pix ?? null,
     hora_servico: linha.hora_servico ? linha.hora_servico.slice(0, 5) : null,
     desconto: Number(linha.desconto) || 0,

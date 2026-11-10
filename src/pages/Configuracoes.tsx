@@ -7,7 +7,7 @@ import { api } from '../lib/api'
 import { baixarBackup, embutirFotos, lerBackup, montarBackup } from '../lib/backup'
 import { useConfig } from '../lib/configContexto'
 import { novoId, reais } from '../lib/formato'
-import type { Configuracoes as Config } from '../types'
+import type { Configuracoes as Config, ItemChecklist } from '../types'
 
 /** Reduz a imagem do logo (máx. 400 px) para não pesar no banco nem no PDF. */
 function lerLogo(arquivo: File): Promise<string> {
@@ -65,6 +65,8 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
         catalogo: form.catalogo.filter((s) => s.descricao.trim()),
         checklist_pos_obra: form.checklist_pos_obra.filter((c) => c.descricao.trim()),
         materiais_pos_obra: form.materiais_pos_obra.filter((m) => m.descricao.trim()),
+        checklist_limpeza: form.checklist_limpeza.filter((c) => c.descricao.trim()),
+        materiais_limpeza: form.materiais_limpeza.filter((m) => m.descricao.trim()),
         pix_contas: contas,
         // as versões antigas liam uma chave só: fica igual à padrão
         pix: contas[0]?.chave ?? '',
@@ -209,6 +211,13 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
                 onChange={(e) => alterar('condicoes_padrao', e.target.value)}
               />
             </Campo>
+            <Campo rotulo="Condições padrão — limpeza">
+              <textarea
+                className="campo min-h-36"
+                value={form.condicoes_padrao_limpeza}
+                onChange={(e) => alterar('condicoes_padrao_limpeza', e.target.value)}
+              />
+            </Campo>
             <Campo rotulo="Condições padrão — pós-obra">
               <textarea
                 className="campo min-h-36"
@@ -226,6 +235,16 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
           </div>
         </Secao>
 
+        <Secao titulo="Limpeza">
+          <span className="rotulo">Lista padrão do que está incluso</span>
+          <ChecklistPadrao itens={form.checklist_limpeza} aoMudar={(lista) => alterar('checklist_limpeza', lista)} />
+          <p className="mt-2 text-xs text-slate-500">Os novos orçamentos de limpeza começam com esta lista. Dá para ajustar em cada um.</p>
+
+          <span className="rotulo mt-4">Produtos e equipamentos padrão</span>
+          <Materiais itens={form.materiais_limpeza} aoMudar={(lista) => alterar('materiais_limpeza', lista)} />
+          <p className="mt-2 text-xs text-slate-500">Aparecem para marcar nos orçamentos de limpeza e saem no PDF.</p>
+        </Secao>
+
         <Secao titulo="Pós-obra">
           <Campo rotulo="Valor padrão do m²" className="max-w-56">
             <CampoNumero
@@ -237,49 +256,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
           <p className="mt-2 text-sm text-slate-500">Já vem preenchido nos novos orçamentos de pós-obra. Pode ser mudado em cada um.</p>
 
           <span className="rotulo mt-4">Lista padrão do que está incluso</span>
-          <ul className="space-y-2">
-            {form.checklist_pos_obra.map((c, indice) => (
-              <li key={c.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={c.incluso}
-                  aria-label={`Item ${indice + 1}: ${c.incluso ? 'incluso' : 'não incluso'}`}
-                  onClick={() =>
-                    alterar('checklist_pos_obra', form.checklist_pos_obra.map((x) => (x.id === c.id ? { ...x, incluso: !x.incluso } : x)))
-                  }
-                  className={`w-24 rounded-full px-2 py-1 text-xs font-semibold ring-1 ${
-                    c.incluso ? 'bg-emerald-50 text-emerald-800 ring-emerald-300' : 'bg-red-50 text-red-700 ring-red-200'
-                  }`}
-                >
-                  {c.incluso ? '✓ Incluso' : '✕ Não incluso'}
-                </button>
-                <input
-                  className="campo"
-                  aria-label={`Descrição do item ${indice + 1} da lista`}
-                  value={c.descricao}
-                  onChange={(e) =>
-                    alterar('checklist_pos_obra', form.checklist_pos_obra.map((x) => (x.id === c.id ? { ...x, descricao: e.target.value } : x)))
-                  }
-                />
-                <button
-                  type="button"
-                  className="rounded-lg px-3 py-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                  aria-label={`Remover ${c.descricao || 'item'} da lista`}
-                  onClick={() => alterar('checklist_pos_obra', form.checklist_pos_obra.filter((x) => x.id !== c.id))}
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className="btn-secundario mt-3 w-full"
-            onClick={() => alterar('checklist_pos_obra', [...form.checklist_pos_obra, { id: novoId(), descricao: '', incluso: true }])}
-          >
-            + Adicionar item à lista
-          </button>
+          <ChecklistPadrao itens={form.checklist_pos_obra} aoMudar={(lista) => alterar('checklist_pos_obra', lista)} />
           <p className="mt-2 text-xs text-slate-500">Os novos orçamentos de pós-obra começam com esta lista. Dá para ajustar em cada um.</p>
 
           <span className="rotulo mt-4">Produtos e equipamentos padrão</span>
@@ -396,6 +373,57 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
           </div>
         </div>
       )}
+    </>
+  )
+}
+
+/** Lista padrão de incluso / não incluso (pós-obra e limpeza). */
+function ChecklistPadrao({ itens, aoMudar }: { itens: ItemChecklist[]; aoMudar: (itens: ItemChecklist[]) => void }) {
+  return (
+    <>
+      <ul className="space-y-2">
+        {itens.map((c, indice) => (
+          <li key={c.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={c.incluso}
+              aria-label={`Item ${indice + 1}: ${c.incluso ? 'incluso' : 'não incluso'}`}
+              onClick={() =>
+                aoMudar(itens.map((x) => (x.id === c.id ? { ...x, incluso: !x.incluso } : x)))
+              }
+              className={`w-24 rounded-full px-2 py-1 text-xs font-semibold ring-1 ${
+                c.incluso ? 'bg-emerald-50 text-emerald-800 ring-emerald-300' : 'bg-red-50 text-red-700 ring-red-200'
+              }`}
+            >
+              {c.incluso ? '✓ Incluso' : '✕ Não incluso'}
+            </button>
+            <input
+              className="campo"
+              aria-label={`Descrição do item ${indice + 1} da lista`}
+              value={c.descricao}
+              onChange={(e) =>
+                aoMudar(itens.map((x) => (x.id === c.id ? { ...x, descricao: e.target.value } : x)))
+              }
+            />
+            <button
+              type="button"
+              className="rounded-lg px-3 py-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+              aria-label={`Remover ${c.descricao || 'item'} da lista`}
+              onClick={() => aoMudar(itens.filter((x) => x.id !== c.id))}
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="btn-secundario mt-3 w-full"
+        onClick={() => aoMudar([...itens, { id: novoId(), descricao: '', incluso: true }])}
+      >
+        + Adicionar item à lista
+      </button>
     </>
   )
 }

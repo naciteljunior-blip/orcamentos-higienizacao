@@ -14,7 +14,7 @@ import {
 } from './calc'
 import { dataBR, lerNumero, linkWhatsApp, reais } from './formato'
 import { lerBackup, montarBackup } from './backup'
-import { CONFIG_PADRAO, POS_OBRA_PADRAO } from './constantes'
+import { CONFIG_PADRAO, LIMPEZA_PADRAO, POS_OBRA_PADRAO } from './constantes'
 import { textoPagamento } from './pdf'
 
 function orc(parcial: Partial<Orcamento>): Orcamento {
@@ -48,6 +48,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     observacoes: '',
     criado_em: '',
     atualizado_em: '',
+    limpeza: { ...LIMPEZA_PADRAO },
     pix: null,
     ...parcial,
   }

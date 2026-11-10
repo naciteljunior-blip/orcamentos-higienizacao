@@ -2,18 +2,11 @@ import { useState } from 'react'
 import { Campo, CampoNumero, Opcoes } from './ui'
 import { SelecaoMateriais } from './Materiais'
 import { useConfig } from '../lib/configContexto'
-import { NIVEIS, NIVEL_ROTULO } from '../lib/constantes'
+import { COMODOS, NIVEIS, NIVEL_ROTULO } from '../lib/constantes'
 import { novoId, reais } from '../lib/formato'
 import { arredondar } from '../lib/calc'
 import type { ItemChecklist, PosObra } from '../types'
 
-const COMODOS: { campo: 'quartos' | 'banheiros' | 'salas' | 'cozinhas' | 'areas_externas'; rotulo: string }[] = [
-  { campo: 'quartos', rotulo: 'Quartos' },
-  { campo: 'banheiros', rotulo: 'Banheiros' },
-  { campo: 'salas', rotulo: 'Salas' },
-  { campo: 'cozinhas', rotulo: 'Cozinhas' },
-  { campo: 'areas_externas', rotulo: 'Externas' },
-]
 
 const inteiro = (v: number) => Math.max(0, Math.round(v))
 
@@ -77,7 +70,7 @@ export default function PosObraCampos({ dados, aoMudar }: { dados: PosObra; aoMu
   )
 }
 
-function Checklist({ itens, aoMudar }: { itens: ItemChecklist[]; aoMudar: (itens: ItemChecklist[]) => void }) {
+export function Checklist({ itens, aoMudar }: { itens: ItemChecklist[]; aoMudar: (itens: ItemChecklist[]) => void }) {
   const [novo, setNovo] = useState('')
 
   function adicionar() {

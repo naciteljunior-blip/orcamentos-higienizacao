@@ -92,10 +92,13 @@ export function SelecaoMateriais({
   opcoes,
   selecionados,
   aoMudar,
+  ondeMudar = 'Ajustes → Pós-obra',
 }: {
   opcoes: Material[]
   selecionados: Material[]
   aoMudar: (itens: Material[]) => void
+  /** onde ficam as opções, para a dica no fim */
+  ondeMudar?: string
 }) {
   const marcados = new Set(selecionados.map(chave))
   const conhecidos = new Set(opcoes.map(chave))
@@ -150,7 +153,7 @@ export function SelecaoMateriais({
           </div>
         )
       })}
-      <p className="text-xs text-slate-500">Toque para marcar o que será usado. Para mudar as opções, vá em Ajustes → Pós-obra.</p>
+      <p className="text-xs text-slate-500">Toque para marcar o que será usado. Para mudar as opções, vá em {ondeMudar}.</p>
     </div>
   )
 }

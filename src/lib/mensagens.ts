@@ -87,7 +87,7 @@ export function linkGoogleAgenda(o: Orcamento, config: Pick<Configuracoes, 'empr
   let datas: string
   if (o.hora_servico) {
     const [h, m] = o.hora_servico.split(':').map(Number)
-    const duracao = o.tipo === 'pos_obra' ? 8 : 3
+    const duracao = o.tipo === 'pos_obra' ? 8 : o.tipo === 'limpeza' && o.limpeza.horas > 0 ? Math.ceil(o.limpeza.horas) : 3
     const fimH = Math.min(23, h + duracao)
     datas = `${dia}T${doisDigitos(h)}${doisDigitos(m)}00/${dia}T${doisDigitos(fimH)}${doisDigitos(m)}00`
   } else {

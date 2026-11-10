@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Orcamento } from '../types'
-import { CONFIG_PADRAO, IMPRESSAO_PADRAO, POS_OBRA_PADRAO } from './constantes'
+import { CONFIG_PADRAO, IMPRESSAO_PADRAO, LIMPEZA_PADRAO, POS_OBRA_PADRAO } from './constantes'
 import { linkWhatsApp, reais, reaisPorExtenso } from './formato'
 import { esperandoResposta, linkGoogleAgenda, mensagemOrcamento, montarAgenda } from './mensagens'
 
@@ -35,6 +35,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     observacoes: '',
     criado_em: '2026-10-01T10:00:00Z',
     atualizado_em: '2026-10-01T10:00:00Z',
+    limpeza: { ...LIMPEZA_PADRAO },
     pix: null,
     ...parcial,
   }
