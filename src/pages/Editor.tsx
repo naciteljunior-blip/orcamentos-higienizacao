@@ -7,6 +7,8 @@ import Fotos from '../components/Fotos'
 import PosObraCampos from '../components/PosObraCampos'
 import LimpezaCampos from '../components/LimpezaCampos'
 import { EscolhaPix, QrPix } from '../components/ContasPix'
+import { EscolhaMarca } from '../components/Marcas'
+import { marcaDoOrcamento } from '../lib/marca'
 import { copiaEColaDoOrcamento, pixDoOrcamento } from '../lib/pix'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { buscarCep, formatarCep, montarEndereco, soDigitos } from '../lib/cep'
@@ -66,6 +68,7 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
       materiais: config.materiais_limpeza.map((m) => ({ ...m, id: novoId() })),
     },
     pix: null,
+    marca_id: null,
     condicoes: {
       higienizacao: config.condicoes_padrao,
       impressao3d: config.condicoes_padrao_3d,
@@ -437,6 +440,16 @@ export default function Editor() {
             {TIPO_ROTULO[atual.tipo]}
           </span>
         </p>
+
+        {config.marcas.length > 1 && (
+          <Secao titulo="Empresa / logo do orçamento">
+            <EscolhaMarca
+              marcas={config.marcas}
+              selecionada={marcaDoOrcamento(atual, config)?.id ?? null}
+              aoEscolher={(id) => alterar('marca_id', id)}
+            />
+          </Secao>
+        )}
 
         <Secao titulo="Status">
           <Opcoes

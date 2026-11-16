@@ -50,6 +50,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     atualizado_em: '',
     limpeza: { ...LIMPEZA_PADRAO },
     pix: null,
+    marca_id: null,
     ...parcial,
   }
 }

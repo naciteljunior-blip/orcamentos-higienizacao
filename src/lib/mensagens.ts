@@ -5,6 +5,7 @@ import { hojeISO, numeroFormatado, somarDias, total } from './calc'
 import { TIPO_ROTULO } from './constantes'
 import { dataBR, dataHoraBR, reais } from './formato'
 import { textoPagamento } from './pagamento'
+import { configDaMarca } from './marca'
 import { copiaEColaDoOrcamento, pixDoOrcamento } from './pix'
 
 /** Dias sem resposta depois de enviado para o orçamento aparecer em "Cobrar resposta". */
@@ -24,7 +25,8 @@ function assinatura(config: Pick<Configuracoes, 'empresa_nome'>): string {
 }
 
 /** Resumo do orçamento para mandar junto com (ou no lugar do) PDF. */
-export function mensagemOrcamento(o: Orcamento, config: Configuracoes): string {
+export function mensagemOrcamento(o: Orcamento, configGeral: Configuracoes): string {
+  const config = configDaMarca(o, configGeral)
   const valor = total(o)
   const linhas = [
     saudacao(o),
@@ -50,7 +52,8 @@ export function mensagemOrcamento(o: Orcamento, config: Configuracoes): string {
 }
 
 /** Lembrete gentil para quem recebeu o orçamento e ainda não respondeu. */
-export function mensagemCobranca(o: Orcamento, config: Configuracoes): string {
+export function mensagemCobranca(o: Orcamento, configGeral: Configuracoes): string {
+  const config = configDaMarca(o, configGeral)
   return (
     `${saudacao(o)} Tudo bem? Passando para saber se conseguiu ver o orçamento ${numeroFormatado(o.numero)} ` +
     `(${reais(total(o))}). Se quiser, posso tirar dúvidas ou ajustar alguma coisa.` +
@@ -59,7 +62,8 @@ export function mensagemCobranca(o: Orcamento, config: Configuracoes): string {
 }
 
 /** Confirmação do agendamento, para mandar na véspera. */
-export function mensagemConfirmacao(o: Orcamento, config: Configuracoes): string {
+export function mensagemConfirmacao(o: Orcamento, configGeral: Configuracoes): string {
+  const config = configDaMarca(o, configGeral)
   const quando = dataHoraBR(o.data_servico, o.hora_servico)
   return (
     `${saudacao(o)} Confirmando o serviço${quando ? ` em ${quando}` : ''}` +
@@ -70,7 +74,8 @@ export function mensagemConfirmacao(o: Orcamento, config: Configuracoes): string
 }
 
 /** Agradecimento depois do serviço, pedindo indicação. */
-export function mensagemAgradecimento(o: Orcamento, config: Configuracoes): string {
+export function mensagemAgradecimento(o: Orcamento, configGeral: Configuracoes): string {
+  const config = configDaMarca(o, configGeral)
   return (
     `${saudacao(o)} Obrigado pela confiança! Se puder, me conte o que achou do serviço. ` +
     'E se conhecer alguém que precise, vou adorar a indicação.' +
@@ -81,7 +86,8 @@ export function mensagemAgradecimento(o: Orcamento, config: Configuracoes): stri
 const doisDigitos = (n: number) => String(n).padStart(2, '0')
 
 /** Link que abre o Google Agenda com o evento do serviço já preenchido. */
-export function linkGoogleAgenda(o: Orcamento, config: Pick<Configuracoes, 'empresa_nome'>): string | null {
+export function linkGoogleAgenda(o: Orcamento, configGeral: Pick<Configuracoes, 'empresa_nome' | 'marcas' | 'logo' | 'logo_com_nome'>): string | null {
+  const config = configDaMarca(o, configGeral)
   if (!o.data_servico) return null
   const dia = o.data_servico.replace(/-/g, '')
   let datas: string

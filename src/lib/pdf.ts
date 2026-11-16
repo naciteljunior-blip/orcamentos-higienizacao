@@ -14,6 +14,7 @@ import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorD
 import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
 import { textoPagamento } from './pagamento'
+import { configDaMarca } from './marca'
 import { copiaEColaDoOrcamento, pixDoOrcamento } from './pix'
 import { qrDataUrl } from './qr'
 
@@ -90,7 +91,8 @@ function cabecalhoEmpresa(doc: jsPDF, config: Configuracoes, y: number, nomePadr
   return 12 + linhasEmpresa.length * 4
 }
 
-export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (ref: string) => string): Promise<Blob> {
+export async function gerarPdf(o: Orcamento, configGeral: Configuracoes, urlFoto: (ref: string) => string): Promise<Blob> {
+  const config = configDaMarca(o, configGeral)
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   let y = MARGEM
 
@@ -467,7 +469,8 @@ export async function gerarPdf(o: Orcamento, config: Configuracoes, urlFoto: (re
 const MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
 /** Recibo de pagamento (uma página): valor em número e por extenso, serviço e assinatura de quem recebeu. */
-export async function gerarRecibo(o: Orcamento, config: Configuracoes, dataRecibo = hojeISO()): Promise<Blob> {
+export async function gerarRecibo(o: Orcamento, configGeral: Configuracoes, dataRecibo = hojeISO()): Promise<Blob> {
+  const config = configDaMarca(o, configGeral)
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const direita = LARGURA - MARGEM
   let y = MARGEM

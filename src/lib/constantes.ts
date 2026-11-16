@@ -180,6 +180,7 @@ export const MESES = [
 ]
 
 export const CONFIG_PADRAO: Configuracoes = {
+  marcas: [],
   empresa_nome: '',
   documento: '',
   telefone: '',

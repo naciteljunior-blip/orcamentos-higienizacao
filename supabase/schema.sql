@@ -45,6 +45,7 @@ create table if not exists public.orcamentos (
   pos_obra jsonb not null default '{}'::jsonb,
   limpeza jsonb not null default '{}'::jsonb,
   pix jsonb,
+  marca_id text,
   condicoes text not null default '',
   observacoes text not null default '',
   criado_em timestamptz not null default now(),
@@ -65,6 +66,7 @@ alter table public.orcamentos add column if not exists pos_obra jsonb not null d
 alter table public.orcamentos add column if not exists cep text not null default '';
 alter table public.orcamentos add column if not exists pix jsonb;
 alter table public.orcamentos add column if not exists limpeza jsonb not null default '{}'::jsonb;
+alter table public.orcamentos add column if not exists marca_id text;
 -- tipos de orçamento aceitos (recriada a cada versão para incluir os tipos novos)
 alter table public.orcamentos drop constraint if exists orcamentos_tipo_check;
 alter table public.orcamentos add constraint orcamentos_tipo_check
@@ -154,7 +156,7 @@ begin
     id, user_id, numero, tipo, status, cliente_nome, cliente_telefone, cliente_email,
     local_tipo, cep, endereco, complemento, data_servico, hora_servico, data_emissao,
     validade_dias, itens, desconto_tipo, desconto, custos, pagamento_forma, pagamento_parcelas,
-    fotos, pdf_fotos, impressao, pos_obra, limpeza, pix, condicoes, observacoes, criado_em, atualizado_em
+    fotos, pdf_fotos, impressao, pos_obra, limpeza, pix, marca_id, condicoes, observacoes, criado_em, atualizado_em
   )
   select
     coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.tipo, 'higienizacao'), coalesce(o.status, 'rascunho'),
@@ -165,7 +167,7 @@ begin
     coalesce(o.desconto_tipo, 'valor'), coalesce(o.desconto, 0), coalesce(o.custos, '[]'::jsonb),
     coalesce(o.pagamento_forma, 'a_vista'), coalesce(o.pagamento_parcelas, 1),
     coalesce(o.fotos, '[]'::jsonb), coalesce(o.pdf_fotos, false),
-    coalesce(o.impressao, '{}'::jsonb), coalesce(o.pos_obra, '{}'::jsonb), coalesce(o.limpeza, '{}'::jsonb), o.pix,
+    coalesce(o.impressao, '{}'::jsonb), coalesce(o.pos_obra, '{}'::jsonb), coalesce(o.limpeza, '{}'::jsonb), o.pix, o.marca_id,
     coalesce(o.condicoes, ''), coalesce(o.observacoes, ''),
     coalesce(o.criado_em, now()), coalesce(o.atualizado_em, now())
   from jsonb_populate_recordset(null::orcamentos, coalesce(backup -> 'orcamentos', '[]'::jsonb)) as o;

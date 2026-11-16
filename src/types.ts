@@ -91,6 +91,18 @@ export interface Limpeza {
   materiais: Material[]
 }
 
+/** Uma empresa / marca com o seu logo (ex.: uma para limpeza, outra para impressão 3D). */
+export interface Marca {
+  id: string
+  nome: string
+  /** imagem em data URL (já reduzida) */
+  logo: string
+  /** o logo já traz o nome: no PDF sai maior e o nome não é repetido */
+  logo_com_nome: boolean
+  /** tipos de orçamento que já começam com esta marca */
+  tipos: TipoOrcamento[]
+}
+
 export interface Custo {
   id: string
   tipo: CustoTipo
@@ -138,6 +150,8 @@ export interface Orcamento {
   impressao: Impressao
   pos_obra: PosObra
   limpeza: Limpeza
+  /** marca (nome e logo) do orçamento; null = a marca padrão do tipo */
+  marca_id: string | null
   /** chave PIX escolhida para este orçamento (cópia); null = a chave padrão dos ajustes */
   pix: ContaPix | null
   condicoes: string
@@ -157,6 +171,9 @@ export interface ServicoCatalogo {
 }
 
 export interface Configuracoes {
+  /** marcas com nome e logo; a primeira é a padrão */
+  marcas: Marca[]
+  /** nome, logo e logo_com_nome abaixo: da primeira marca (versões antigas só tinham estes) */
   empresa_nome: string
   documento: string
   telefone: string

@@ -2,41 +2,13 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'reac
 import { Aviso, Cabecalho, Campo, CampoNumero, Carregando, Erro, Secao } from '../components/ui'
 import Materiais from '../components/Materiais'
 import { EditorContasPix } from '../components/ContasPix'
+import { EditorMarcas } from '../components/Marcas'
 import { useConfirmar } from '../components/Confirmacao'
 import { api } from '../lib/api'
 import { baixarBackup, embutirFotos, lerBackup, montarBackup } from '../lib/backup'
 import { useConfig } from '../lib/configContexto'
 import { novoId, reais } from '../lib/formato'
 import type { Configuracoes as Config, ItemChecklist } from '../types'
-
-/** Reduz a imagem do logo (máx. 800 px) para não pesar no banco nem no PDF. */
-function lerLogo(arquivo: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const leitor = new FileReader()
-    leitor.onerror = () => reject(new Error('Não foi possível ler a imagem.'))
-    leitor.onload = () => {
-      const img = new Image()
-      img.onerror = () => reject(new Error('Formato de imagem não suportado.'))
-      img.onload = () => {
-        const escala = Math.min(1, 800 / Math.max(img.width, img.height))
-        const canvas = document.createElement('canvas')
-        canvas.width = Math.round(img.width * escala)
-        canvas.height = Math.round(img.height * escala)
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        const png = canvas.toDataURL('image/png')
-        if (png.length <= 150_000) return resolve(png)
-        // foto grande: JPEG fica bem menor (fundo branco no lugar da transparência)
-        ctx.globalCompositeOperation = 'destination-over'
-        ctx.fillStyle = '#fff'
-        ctx.fillRect(0, 0, canvas.width, canvas.height)
-        resolve(canvas.toDataURL('image/jpeg', 0.85))
-      }
-      img.src = leitor.result as string
-    }
-    leitor.readAsDataURL(arquivo)
-  })
-}
 
 export default function Configuracoes({ usuario }: { usuario: string }) {
   const { config, carregada, erro, recarregar, salvar } = useConfig()
@@ -60,6 +32,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
     setSalvando(true)
     try {
       const contas = form.pix_contas.filter((c) => c.chave.trim())
+      const marcas = form.marcas.filter((m) => m.nome.trim() || m.logo)
       await salvar({
         ...form,
         catalogo: form.catalogo.filter((s) => s.descricao.trim()),
@@ -68,6 +41,11 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
         checklist_limpeza: form.checklist_limpeza.filter((c) => c.descricao.trim()),
         materiais_limpeza: form.materiais_limpeza.filter((m) => m.descricao.trim()),
         pix_contas: contas,
+        marcas,
+        // o nome antigo fica igual ao da primeira marca; o logo antigo não é repetido (já está nas marcas)
+        empresa_nome: marcas[0]?.nome ?? '',
+        logo: '',
+        logo_com_nome: false,
         // as versões antigas liam uma chave só: fica igual à padrão
         pix: contas[0]?.chave ?? '',
         pix_titular: contas[0]?.titular ?? '',
@@ -122,7 +100,7 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
     )
   }
 
-  const texto = (campo: 'empresa_nome' | 'documento' | 'telefone' | 'email' | 'endereco') => ({
+  const texto = (campo: 'documento' | 'telefone' | 'email' | 'endereco') => ({
     value: form[campo],
     onChange: (e: ChangeEvent<HTMLInputElement>) => alterar(campo, e.target.value),
   })
@@ -136,9 +114,10 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
 
         <Secao titulo="Dados da empresa (aparecem no PDF)">
           <div className="space-y-3">
-            <Campo rotulo="Nome da empresa / profissional">
-              <input className="campo" {...texto('empresa_nome')} />
-            </Campo>
+            <div>
+              <span className="rotulo">Empresas e logos</span>
+              <EditorMarcas marcas={form.marcas} aoMudar={(marcas) => alterar('marcas', marcas)} avisar={setAviso} />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo rotulo="CNPJ ou CPF">
                 <input className="campo" inputMode="numeric" {...texto('documento')} />
@@ -157,52 +136,6 @@ export default function Configuracoes({ usuario }: { usuario: string }) {
             <Campo rotulo="Endereço ou cidade (opcional)">
               <input className="campo" {...texto('endereco')} />
             </Campo>
-            <div>
-              <span className="rotulo">Logo (opcional)</span>
-              <div className="flex items-center gap-3">
-                {form.logo ? (
-                  <img src={form.logo} alt="Logo atual" className="h-16 max-w-48 rounded-lg bg-white object-contain p-1 ring-1 ring-slate-200" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-50 text-xs text-slate-400 ring-1 ring-slate-200">
-                    Sem logo
-                  </div>
-                )}
-                <label className="btn-secundario cursor-pointer text-sm">
-                  Escolher imagem
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="sr-only"
-                    onChange={async (e) => {
-                      const arquivo = e.target.files?.[0]
-                      if (!arquivo) return
-                      try {
-                        alterar('logo', await lerLogo(arquivo))
-                      } catch (err) {
-                        setAviso((err as Error).message)
-                      }
-                      e.target.value = ''
-                    }}
-                  />
-                </label>
-                {form.logo && (
-                  <button type="button" className="text-sm font-semibold text-red-700" onClick={() => alterar('logo', '')}>
-                    Remover
-                  </button>
-                )}
-              </div>
-              {form.logo && (
-                <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-brand-700"
-                    checked={form.logo_com_nome}
-                    onChange={(e) => alterar('logo_com_nome', e.target.checked)}
-                  />
-                  O logo já tem o nome da empresa (sai maior no PDF, sem repetir o nome)
-                </label>
-              )}
-            </div>
           </div>
         </Secao>
 

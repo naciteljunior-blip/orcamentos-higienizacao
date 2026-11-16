@@ -50,3 +50,35 @@ export async function imagemParaPdf(url: string, maxLado = 900): Promise<{ dados
   })
   return { dados, ...dimensoes }
 }
+
+/**
+ * Reduz a imagem do logo (máx. 600 px, até ~70 KB) para não pesar no banco nem no PDF:
+ * na página do claude.ai todas as configurações, com os logos, cabem em 256 KB.
+ */
+export function lerLogo(arquivo: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader()
+    leitor.onerror = () => reject(new Error('Não foi possível ler a imagem.'))
+    leitor.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('Formato de imagem não suportado.'))
+      img.onload = () => {
+        const escala = Math.min(1, 600 / Math.max(img.width, img.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(img.width * escala)
+        canvas.height = Math.round(img.height * escala)
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        const png = canvas.toDataURL('image/png')
+        if (png.length <= 95_000) return resolve(png)
+        // foto grande: JPEG fica bem menor (fundo branco no lugar da transparência)
+        ctx.globalCompositeOperation = 'destination-over'
+        ctx.fillStyle = '#fff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.85))
+      }
+      img.src = leitor.result as string
+    }
+    leitor.readAsDataURL(arquivo)
+  })
+}

@@ -1,5 +1,6 @@
 import type { Configuracoes, ContaPix, Orcamento } from '../types'
 import { pixCopiaECola } from './brcode'
+import { marcaDoOrcamento } from './marca'
 import { numeroFormatado, total } from './calc'
 
 /**
@@ -21,15 +22,15 @@ export function nomeContaPix(c: ContaPix): string {
  * null quando não há chave.
  */
 export function copiaEColaDoOrcamento(
-  o: Pick<Orcamento, 'pix' | 'itens' | 'desconto_tipo' | 'desconto' | 'pagamento_forma' | 'pagamento_parcelas'> & { numero?: number },
-  config: Pick<Configuracoes, 'pix_contas' | 'empresa_nome'>,
+  o: Pick<Orcamento, 'pix' | 'tipo' | 'marca_id' | 'itens' | 'desconto_tipo' | 'desconto' | 'pagamento_forma' | 'pagamento_parcelas'> & { numero?: number },
+  config: Pick<Configuracoes, 'pix_contas' | 'empresa_nome' | 'marcas'>,
 ): string | null {
   const conta = pixDoOrcamento(o, config)
   if (!conta?.chave.trim()) return null
   const parcelado = o.pagamento_forma === 'parcelado' && o.pagamento_parcelas > 1
   return pixCopiaECola({
     chave: conta.chave,
-    nome: conta.titular || config.empresa_nome,
+    nome: conta.titular || marcaDoOrcamento(o, config)?.nome || config.empresa_nome,
     valor: parcelado ? 0 : total(o),
     identificador: o.numero ? numeroFormatado(o.numero) : undefined,
   })

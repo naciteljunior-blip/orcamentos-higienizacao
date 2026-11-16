@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { completarConfig } from './api'
 import { crc16, normalizarChave, pixCopiaECola } from './brcode'
+import { configDaMarca, marcaDoOrcamento } from './marca'
 import { copiaEColaDoOrcamento, pixDoOrcamento } from './pix'
 
 const nubank = { id: 'n', chave: '11912345678', titular: 'Ana', banco: 'Nubank' }
@@ -57,10 +58,31 @@ describe('PIX copia e cola', () => {
   })
 
   it('no orçamento parcelado sai sem valor', () => {
-    const base = { pix: null, numero: 3, itens: [{ id: 'i', descricao: 'x', quantidade: 1, valor_unitario: 300 }], desconto_tipo: 'valor' as const, desconto: 0 }
-    const config = { pix_contas: [nubank], empresa_nome: 'Lava Bem' }
+    const base = { pix: null, tipo: 'higienizacao' as const, marca_id: null, numero: 3, itens: [{ id: 'i', descricao: 'x', quantidade: 1, valor_unitario: 300 }], desconto_tipo: 'valor' as const, desconto: 0 }
+    const config = { pix_contas: [nubank], empresa_nome: 'Lava Bem', marcas: [] }
     expect(copiaEColaDoOrcamento({ ...base, pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, config)).toContain('5406300.00')
     expect(copiaEColaDoOrcamento({ ...base, pagamento_forma: 'parcelado', pagamento_parcelas: 3 }, config)).not.toContain('5406')
-    expect(copiaEColaDoOrcamento({ ...base, pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, { pix_contas: [], empresa_nome: '' })).toBeNull()
+    expect(copiaEColaDoOrcamento({ ...base, pagamento_forma: 'a_vista', pagamento_parcelas: 1 }, { pix_contas: [], empresa_nome: '', marcas: [] })).toBeNull()
+  })
+})
+
+describe('marcas', () => {
+  const limpa = { id: 'cf', nome: 'Claudia Facilities', logo: 'data:cf', logo_com_nome: true, tipos: [] }
+  const lab = { id: 'pl', nome: 'Plissa Lab', logo: 'data:pl', logo_com_nome: true, tipos: ['impressao3d' as const] }
+  const config = { marcas: [limpa, lab], empresa_nome: 'Claudia Facilities', logo: 'data:cf', logo_com_nome: true }
+
+  it('usa a escolhida, senão a do tipo, senão a primeira', () => {
+    expect(marcaDoOrcamento({ marca_id: null, tipo: 'limpeza' }, config)?.nome).toBe('Claudia Facilities')
+    expect(marcaDoOrcamento({ marca_id: null, tipo: 'impressao3d' }, config)?.nome).toBe('Plissa Lab')
+    expect(marcaDoOrcamento({ marca_id: 'pl', tipo: 'limpeza' }, config)?.nome).toBe('Plissa Lab')
+    expect(marcaDoOrcamento({ marca_id: 'apagada', tipo: 'limpeza' }, config)?.nome).toBe('Claudia Facilities')
+    expect(configDaMarca({ marca_id: null, tipo: 'impressao3d' }, config)).toMatchObject({ empresa_nome: 'Plissa Lab', logo: 'data:pl' })
+  })
+
+  it('transforma o nome e logo antigos na primeira marca', () => {
+    expect(completarConfig({ empresa_nome: 'Lava Bem', logo: 'data:x' }).marcas).toEqual([
+      { id: 'principal', nome: 'Lava Bem', logo: 'data:x', logo_com_nome: false, tipos: [] },
+    ])
+    expect(completarConfig({}).marcas).toEqual([])
   })
 })

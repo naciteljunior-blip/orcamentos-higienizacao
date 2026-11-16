@@ -46,6 +46,9 @@ const fotosEmbutidas = {
 /** Completa campos que faltem (ex.: configurações salvas por uma versão anterior). */
 export function completarConfig(dados: Partial<Configuracoes> | null | undefined): Configuracoes {
   const config = { ...CONFIG_PADRAO, ...(dados ?? {}) }
+  if (!config.marcas.length && (config.empresa_nome.trim() || config.logo)) {
+    config.marcas = [{ id: 'principal', nome: config.empresa_nome, logo: config.logo, logo_com_nome: config.logo_com_nome, tipos: [] }]
+  }
   if (!config.pix_contas.length && config.pix.trim()) {
     config.pix_contas = [{ id: 'principal', chave: config.pix.trim(), titular: config.pix_titular, banco: config.pix_banco }]
   }
@@ -62,6 +65,7 @@ function normalizar(linha: Orcamento): Orcamento {
     pos_obra: { ...POS_OBRA_PADRAO, ...(linha.pos_obra ?? {}) },
     limpeza: { ...LIMPEZA_PADRAO, ...(linha.limpeza ?? {}) },
     pix: linha.pix ?? null,
+    marca_id: linha.marca_id ?? null,
     hora_servico: linha.hora_servico ? linha.hora_servico.slice(0, 5) : null,
     desconto: Number(linha.desconto) || 0,
     itens: linha.itens ?? [],

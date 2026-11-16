@@ -37,6 +37,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     atualizado_em: '2026-10-01T10:00:00Z',
     limpeza: { ...LIMPEZA_PADRAO },
     pix: null,
+    marca_id: null,
     ...parcial,
   }
 }
