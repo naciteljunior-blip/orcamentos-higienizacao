@@ -26,6 +26,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     cliente_nome: 'Cliente',
     cliente_telefone: '',
     cliente_email: '',
+    cliente_documento: '',
     local_tipo: 'casa',
     cep: '',
     endereco: '',

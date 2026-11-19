@@ -25,6 +25,8 @@ export interface Item {
   descricao: string
   quantidade: number
   valor_unitario: number
+  /** preço "de" (sem a promoção), por unidade; o cliente vê "de X por Y" */
+  valor_de?: number
   /** pós-obra: linha calculada pela área (quantidade = m², valor = preço do m²) */
   por_area?: boolean
 }
@@ -127,6 +129,8 @@ export interface Orcamento {
   cliente_nome: string
   cliente_telefone: string
   cliente_email: string
+  /** CPF ou CNPJ do cliente (empresas) */
+  cliente_documento: string
   local_tipo: LocalTipo
   cep: string
   endereco: string

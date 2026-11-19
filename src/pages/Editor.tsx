@@ -12,7 +12,7 @@ import { marcaDoOrcamento } from '../lib/marca'
 import { copiaEColaDoOrcamento, pixDoOrcamento } from '../lib/pix'
 import { MODO_ARTIFACT, salvarArquivo } from '../lib/plataforma'
 import { buscarCep, formatarCep, montarEndereco, soDigitos } from '../lib/cep'
-import { hojeISO, itensComArea, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
+import { economiaItens, hojeISO, itensComArea, valorDe, numeroFormatado, resultado, somarDias, subtotal, totalItem, valorDesconto, valorParcela } from '../lib/calc'
 import { useConfig } from '../lib/configContexto'
 import {
   CUSTO_ROTULO,
@@ -39,6 +39,7 @@ function orcamentoInicial(config: Configuracoes, tipo: TipoOrcamento): Orcamento
     cliente_nome: '',
     cliente_telefone: '',
     cliente_email: '',
+    cliente_documento: '',
     local_tipo: 'apartamento',
     cep: '',
     endereco: '',
@@ -201,6 +202,7 @@ export default function Editor() {
           cliente_nome: anterior.cliente_nome,
           cliente_telefone: anterior.cliente_telefone,
           cliente_email: anterior.cliente_email,
+          cliente_documento: anterior.cliente_documento,
           ...(a.tipo !== 'impressao3d' && {
             local_tipo: anterior.local_tipo,
             cep: anterior.cep,
@@ -511,6 +513,14 @@ export default function Editor() {
                   onChange={(e) => alterar('cliente_email', e.target.value)}
                 />
               </Campo>
+              <Campo rotulo="CPF / CNPJ (opcional)">
+                <input
+                  className="campo"
+                  inputMode="numeric"
+                  value={atual.cliente_documento}
+                  onChange={(e) => alterar('cliente_documento', e.target.value)}
+                />
+              </Campo>
             </div>
           </div>
         </Secao>
@@ -686,9 +696,34 @@ export default function Editor() {
                   </Campo>
                   <div className="pb-2.5 text-right">
                     <span className="rotulo mb-0">Total</span>
+                    {valorDe(item) && <span className="block text-xs text-slate-400 line-through">{reais(valorDe(item)! * item.quantidade)}</span>}
                     <span className="font-semibold">{reais(totalItem(item))}</span>
                   </div>
                 </div>
+                {!item.por_area &&
+                  (item.valor_de !== undefined ? (
+                    <div className="mt-2 flex items-end gap-2">
+                      <Campo rotulo="Preço “de” (sem promoção, por unidade)" className="flex-1">
+                        <CampoNumero
+                          rotuloAcessivel={`Preço de do item ${indice + 1}`}
+                          valor={item.valor_de}
+                          prefixo="R$"
+                          aoMudar={(v) => alterarItem(item.id, { valor_de: v })}
+                        />
+                      </Campo>
+                      <button
+                        type="button"
+                        className="mb-1 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+                        onClick={() => alterarItem(item.id, { valor_de: undefined })}
+                      >
+                        Tirar
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" className="mt-1 text-sm font-semibold text-brand-700" onClick={() => alterarItem(item.id, { valor_de: 0 })}>
+                      + Preço “de / por” (promoção)
+                    </button>
+                  ))}
               </li>
             ))}
           </ul>
@@ -806,6 +841,12 @@ export default function Editor() {
             )}
 
             <dl className="space-y-1 rounded-lg bg-slate-50 p-3 text-sm ring-1 ring-slate-200">
+              {economiaItens(atual.itens) > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <dt>Economia nos preços “de / por”</dt>
+                  <dd>{reais(economiaItens(atual.itens))}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-slate-600">Subtotal</dt>
                 <dd>{reais(subtotal(atual.itens))}</dd>

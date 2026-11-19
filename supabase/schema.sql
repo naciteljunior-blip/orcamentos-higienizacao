@@ -24,6 +24,7 @@ create table if not exists public.orcamentos (
   cliente_nome text not null default '',
   cliente_telefone text not null default '',
   cliente_email text not null default '',
+  cliente_documento text not null default '',
   local_tipo text not null default 'apartamento'
     check (local_tipo in ('apartamento', 'predio', 'casa', 'comercio')),
   cep text not null default '',
@@ -67,6 +68,7 @@ alter table public.orcamentos add column if not exists cep text not null default
 alter table public.orcamentos add column if not exists pix jsonb;
 alter table public.orcamentos add column if not exists limpeza jsonb not null default '{}'::jsonb;
 alter table public.orcamentos add column if not exists marca_id text;
+alter table public.orcamentos add column if not exists cliente_documento text not null default '';
 -- tipos de orçamento aceitos (recriada a cada versão para incluir os tipos novos)
 alter table public.orcamentos drop constraint if exists orcamentos_tipo_check;
 alter table public.orcamentos add constraint orcamentos_tipo_check
@@ -153,14 +155,14 @@ begin
   delete from orcamentos where user_id = uid;
 
   insert into orcamentos (
-    id, user_id, numero, tipo, status, cliente_nome, cliente_telefone, cliente_email,
+    id, user_id, numero, tipo, status, cliente_nome, cliente_telefone, cliente_email, cliente_documento,
     local_tipo, cep, endereco, complemento, data_servico, hora_servico, data_emissao,
     validade_dias, itens, desconto_tipo, desconto, custos, pagamento_forma, pagamento_parcelas,
     fotos, pdf_fotos, impressao, pos_obra, limpeza, pix, marca_id, condicoes, observacoes, criado_em, atualizado_em
   )
   select
     coalesce(o.id, gen_random_uuid()), uid, o.numero, coalesce(o.tipo, 'higienizacao'), coalesce(o.status, 'rascunho'),
-    coalesce(o.cliente_nome, ''), coalesce(o.cliente_telefone, ''), coalesce(o.cliente_email, ''),
+    coalesce(o.cliente_nome, ''), coalesce(o.cliente_telefone, ''), coalesce(o.cliente_email, ''), coalesce(o.cliente_documento, ''),
     coalesce(o.local_tipo, 'apartamento'), coalesce(o.cep, ''), coalesce(o.endereco, ''), coalesce(o.complemento, ''),
     o.data_servico, o.hora_servico, coalesce(o.data_emissao, current_date),
     coalesce(o.validade_dias, 30), coalesce(o.itens, '[]'::jsonb),

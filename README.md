@@ -15,6 +15,8 @@ Sistema web para criar e acompanhar orçamentos de higienização (sofás, colch
 - **Recibo de pagamento** em PDF, com o valor por extenso.
 - **Várias chaves PIX**: cadastre quantas quiser em Ajustes e escolha em cada orçamento em qual receber (dá para cadastrar uma nova ali mesmo).
 - **Várias empresas / logos** (ex.: Claudia Facilities e Plissê Lab): cada orçamento escolhe com qual nome e logo sai; cada tipo de orçamento pode começar com uma delas.
+- **Preço “de / por”** em cada item (promoção): o PDF mostra o “de” riscado e quanto o cliente economiza.
+- **CPF / CNPJ do cliente** no orçamento e no PDF (para empresas).
 - **QR do PIX** com o valor do orçamento, na tela, no PDF e no resumo do WhatsApp (PIX copia e cola). No parcelado, o QR sai sem valor.
 - **Cliente já atendido**: ao digitar o nome, oferece trazer telefone e endereço do último orçamento.
 - **Backup e restauração** em arquivo `.json` (com as fotos dentro).

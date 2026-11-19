@@ -1,7 +1,7 @@
 // Textos prontos para o WhatsApp, link para o Google Agenda e o que entra na agenda do app.
 
 import type { Configuracoes, Orcamento } from '../types'
-import { hojeISO, numeroFormatado, somarDias, total } from './calc'
+import { economiaItens, hojeISO, numeroFormatado, somarDias, total } from './calc'
 import { TIPO_ROTULO } from './constantes'
 import { dataBR, dataHoraBR, reais } from './formato'
 import { textoPagamento } from './pagamento'
@@ -32,7 +32,7 @@ export function mensagemOrcamento(o: Orcamento, configGeral: Configuracoes): str
     saudacao(o),
     `Segue o orçamento ${numeroFormatado(o.numero)} (${TIPO_ROTULO[o.tipo].toLowerCase()}).`,
     '',
-    `Total: *${reais(valor)}*`,
+    economiaItens(o.itens) > 0 ? `Total: de ~${reais(valor + economiaItens(o.itens))}~ por *${reais(valor)}*` : `Total: *${reais(valor)}*`,
     textoPagamento(o, valor),
   ]
   if (o.tipo === 'impressao3d') {

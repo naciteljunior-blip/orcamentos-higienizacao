@@ -61,6 +61,7 @@ function normalizar(linha: Orcamento): Orcamento {
     ...linha,
     tipo: linha.tipo ?? 'higienizacao',
     cep: linha.cep ?? '',
+    cliente_documento: linha.cliente_documento ?? '',
     impressao: { ...IMPRESSAO_PADRAO, ...(linha.impressao ?? {}) },
     pos_obra: { ...POS_OBRA_PADRAO, ...(linha.pos_obra ?? {}) },
     limpeza: { ...LIMPEZA_PADRAO, ...(linha.limpeza ?? {}) },

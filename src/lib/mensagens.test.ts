@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Orcamento } from '../types'
 import { CONFIG_PADRAO, IMPRESSAO_PADRAO, LIMPEZA_PADRAO, POS_OBRA_PADRAO } from './constantes'
 import { linkWhatsApp, reais, reaisPorExtenso } from './formato'
+import { economiaItens, total } from './calc'
 import { esperandoResposta, linkGoogleAgenda, mensagemOrcamento, montarAgenda } from './mensagens'
 
 function orc(parcial: Partial<Orcamento>): Orcamento {
@@ -13,6 +14,7 @@ function orc(parcial: Partial<Orcamento>): Orcamento {
     cliente_nome: 'Maria Souza',
     cliente_telefone: '11912345678',
     cliente_email: '',
+    cliente_documento: '',
     local_tipo: 'casa',
     cep: '',
     endereco: 'Rua A, 10',
@@ -86,6 +88,19 @@ describe('mensagens', () => {
     const texto = mensagemOrcamento(orc({ pix: conta }), { ...CONFIG_PADRAO, pix_contas: [{ id: 'a', chave: 'padrao', titular: '', banco: '' }, conta] })
     expect(texto).toContain('PIX: outra-chave (Ana) - Inter')
     expect(texto).not.toContain('padrao')
+  })
+
+  it('mostra o "de / por" dos itens em promoção', () => {
+    const o = orc({
+      itens: [
+        { id: 'a', descricao: 'Sofá', quantidade: 1, valor_unitario: 490, valor_de: 520 },
+        { id: 'b', descricao: '2 poltronas', quantidade: 2, valor_unitario: 200, valor_de: 250 },
+        { id: 'c', descricao: 'Almofada', quantidade: 1, valor_unitario: 30, valor_de: 20 },
+      ],
+    })
+    expect(economiaItens(o.itens)).toBe(130)
+    expect(total(o)).toBe(920)
+    expect(mensagemOrcamento(o, CONFIG_PADRAO)).toContain(`Total: de ~${reais(1050)}~ por *${reais(920)}*`)
   })
 
   it('leva o texto no link do WhatsApp', () => {

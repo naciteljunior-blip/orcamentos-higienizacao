@@ -32,6 +32,16 @@ export function itensComArea(itens: Item[], area: number, valorM2: number, id: s
   return [linha, ...itens]
 }
 
+/** Preço "de" do item (só quando é maior que o valor cobrado). */
+export function valorDe(item: Item): number | null {
+  return item.valor_de && item.valor_de > (item.valor_unitario || 0) ? item.valor_de : null
+}
+
+/** Quanto o cliente economiza com os preços "de / por" dos itens. */
+export function economiaItens(itens: Item[]): number {
+  return arredondar(itens.reduce((soma, i) => soma + (valorDe(i) ? (valorDe(i)! - (i.valor_unitario || 0)) * (i.quantidade || 0) : 0), 0))
+}
+
 type ParaTotais = Pick<OrcamentoEditavel, 'itens' | 'desconto_tipo' | 'desconto' | 'custos'>
 
 /** Desconto em R$, nunca maior que o subtotal. */

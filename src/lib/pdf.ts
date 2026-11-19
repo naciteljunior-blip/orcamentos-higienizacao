@@ -10,7 +10,7 @@ import {
   NIVEL_ROTULO,
   TIPO_ROTULO,
 } from './constantes'
-import { hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorDesconto } from './calc'
+import { economiaItens, hojeISO, numeroFormatado, somarDias, subtotal, total, totalItem, valorDe, valorDesconto } from './calc'
 import { dataBR, dataHoraBR, decimal, reais, reaisPorExtenso } from './formato'
 import { imagemParaPdf } from './imagem'
 import { textoPagamento } from './pagamento'
@@ -176,6 +176,7 @@ export async function gerarPdf(o: Orcamento, configGeral: Configuracoes, urlFoto
     ['Nome', o.cliente_nome],
     ['Telefone', o.cliente_telefone],
     ['E-mail', o.cliente_email],
+    ['CPF / CNPJ', o.cliente_documento],
   ])
 
   const e3d = o.tipo === 'impressao3d'
@@ -300,7 +301,36 @@ export async function gerarPdf(o: Orcamento, configGeral: Configuracoes, urlFoto
     startY: y,
     margin: { left: MARGEM, right: MARGEM },
     head: [['Descrição', 'Qtd.', 'Valor unit.', 'Total']],
-    body: o.itens.map((item) => [item.descricao, decimal(item.quantidade), reais(item.valor_unitario), reais(totalItem(item))]),
+    // com preço "de": a célula fica com duas linhas, desenhadas à mão (a de cima riscada)
+    body: o.itens.map((item) => [
+      item.descricao,
+      decimal(item.quantidade),
+      valorDe(item) ? `${reais(valorDe(item)!)}\n${reais(item.valor_unitario)}` : reais(item.valor_unitario),
+      valorDe(item) ? `${reais(valorDe(item)! * item.quantidade)}\n${reais(totalItem(item))}` : reais(totalItem(item)),
+    ]),
+    didDrawCell: (c) => {
+      const item = o.itens[c.row.index]
+      if (c.section !== 'body' || c.column.index < 2 || !item || !valorDe(item)) return
+      const [de, por] = (c.cell.raw as string).split('\n')
+      const direitaCelula = c.cell.x + c.cell.width - c.cell.padding('right')
+      const topo = c.cell.y + c.cell.padding('top')
+      // cobre o texto padrão e redesenha: "de" cinza e riscado, "por" em destaque
+      const fundo = c.row.index % 2 ? 255 : 245 // listras da tabela
+      doc.setFillColor(fundo, fundo, fundo)
+      doc.rect(c.cell.x + 0.2, c.cell.y + 0.2, c.cell.width - 0.4, c.cell.height - 0.4, 'F')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(...COR_SUAVE)
+      doc.text(de, direitaCelula, topo + 2.8, { align: 'right' })
+      const largura = doc.getTextWidth(de)
+      doc.setDrawColor(...COR_SUAVE)
+      doc.setLineWidth(0.25)
+      doc.line(direitaCelula - largura, topo + 1.9, direitaCelula, topo + 1.9)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9.5)
+      doc.setTextColor(...COR_TEXTO)
+      doc.text(por, direitaCelula, topo + 7, { align: 'right' })
+    },
     theme: 'striped',
     styles: { font: 'helvetica', fontSize: 9.5, textColor: COR_TEXTO, cellPadding: 2.2 },
     headStyles: { fillColor: COR_DESTAQUE, textColor: 255, fontStyle: 'bold' },
@@ -315,14 +345,19 @@ export async function gerarPdf(o: Orcamento, configGeral: Configuracoes, urlFoto
   // ---- Totais ----
   const desconto = valorDesconto(o)
   const valorTotal = total(o)
-  const linhaTotal = (rotulo: string, valor: string, destaque = false) => {
+  const linhaTotal = (rotulo: string, valor: string, destaque = false, cor: [number, number, number] = COR_TEXTO) => {
     garantirEspaco(7)
     doc.setFont('helvetica', destaque ? 'bold' : 'normal')
     doc.setFontSize(destaque ? 12 : 10)
-    doc.setTextColor(...(destaque ? COR_DESTAQUE : COR_TEXTO))
+    doc.setTextColor(...(destaque ? COR_DESTAQUE : cor))
     doc.text(rotulo, direita - 45, y, { align: 'right' })
     doc.text(valor, direita, y, { align: 'right' })
     y += destaque ? 7 : 5.5
+  }
+  const economia = economiaItens(o.itens)
+  if (economia > 0) {
+    linhaTotal('Valor sem promoção', reais(subtotal(o.itens) + economia))
+    linhaTotal('Você economiza', `- ${reais(economia)}`, false, [21, 128, 61])
   }
   if (desconto > 0) {
     linhaTotal('Subtotal', reais(subtotal(o.itens)))
